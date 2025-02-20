@@ -41,7 +41,7 @@ To start a container from the built image, run:
 ```sh
 docker run -it --rm -v $PWD:/workspace cuda11.5-cuzk bash
 ```
-- Replace `cuda11.5-cuzk` with a unique name for your container.
+- Replace `cuda11.5-cuzk` with the name of your image.
 - `-v $PWD:/workspace` will put the present working directory inside the `/workspace` folder of the container. So, update it according to your need. 
 - `bash` is the command that we'll execute when launching the container from the image. If you need to run anything else you can replace the `bash` with that command; e.g.: `nvidia-smi`, `nvcc --version` etc.
 - If you have not set `nvidia` as default runtime use the following command to utilize the gpu.
