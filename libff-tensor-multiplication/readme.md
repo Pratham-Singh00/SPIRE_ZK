@@ -32,4 +32,4 @@ sage -n jupyter
 ```
 
 
-The test file (`test-double-addition.cu`) contains the method `test_multiplication that` can be modified to test other cases. 
+The test file (`test-double-addition.cu`) contains the method `test_multiplication` that can be modified to test other cases. 
