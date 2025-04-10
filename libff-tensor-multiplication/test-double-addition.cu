@@ -286,7 +286,6 @@ void Reduce(libff::G1<ppT>* hg1, libff::Fr<ppT>* instance, size_t total)
     g1.to_special();
 
 }
-
 __global__ void test_multiplication(instance_params* ip)
 {
     //generate two random scalar and test if the multiplication works
@@ -347,6 +346,16 @@ __global__ void test_multiplication(instance_params* ip)
     printf("\nZ : \n");
     dblGenerator.Z.as_bigint().print();
 
+    libff::bigint<6L> x_val1("2647573539365908156187872320875289844232686969072315270667078416032850847337240712712688001976328196186160732037825");
+    libff::bigint<6L> y_val1("2113093938667914396000776806186400354893362127190679233834878499249011208112236064419880982960294133785487484496738");
+    libff::bigint<6L> z_val1("1");
+
+    assert(x_val1 == dblGenerator.X.as_bigint());
+    assert(y_val1 == dblGenerator.Y.as_bigint());
+    assert(z_val1 == dblGenerator.Z.as_bigint());
+
+
+
 
     printf("\n-----------------------------------\n");
 
@@ -366,6 +375,14 @@ __global__ void test_multiplication(instance_params* ip)
     printf("\nZ : \n");
     add_g_2g.Z.as_bigint().print();
 
+
+    libff::bigint<6L> x_val2("3985804938496873456137352930929051089705849152952571534528489884143131519159321947847380917414645971891223376872198");
+    libff::bigint<6L> y_val2("1613579565203645874155960391187678510556750330299737199914964851572472065713038177477967827161821746801223930803737");
+    libff::bigint<6L> z_val2("1");
+
+    assert(x_val2 == add_g_2g.X.as_bigint());
+    assert(y_val2 == add_g_2g.Y.as_bigint());
+    assert(z_val2 == add_g_2g.Z.as_bigint());
     printf("\n-----------------------------------\n");
 
     //Test a point multiplication with a scalar. 
@@ -384,11 +401,18 @@ __global__ void test_multiplication(instance_params* ip)
     scalar_result.Y.as_bigint().print();
     printf("\nZ : \n");
     scalar_result.Z.as_bigint().print();
+
+    libff::bigint<6L> x_val3("2990416832278317204423960161190962033182140278537947825332705471122050139499833334224803208095522007081317890697313");
+    libff::bigint<6L> y_val3("3423211919889812752414216786057159302617883252024474251795346068064526621995760135560991251922464634905502966017585");
+    libff::bigint<6L> z_val3("1");
+
+    assert(x_val3 == scalar_result.X.as_bigint());
+    assert(y_val3 == scalar_result.Y.as_bigint());
+    assert(z_val3 == scalar_result.Z.as_bigint());
     
     __syncthreads();
     __syncwarp();
 }
-
 int main(int argc, char* argv[])
 {
 
