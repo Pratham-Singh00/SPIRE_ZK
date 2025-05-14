@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BLS12_381_CONSTANTS_CU
+#define BLS12_381_CONSTANTS_CU
 
 #include <stdint.h>
 #include <cuda_runtime.h>
@@ -104,3 +105,5 @@ namespace bls12_381
     
 
 } 
+
+#endif 

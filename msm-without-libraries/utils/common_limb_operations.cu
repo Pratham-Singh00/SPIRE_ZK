@@ -1,4 +1,6 @@
-#pragma once
+#ifndef __COMMON_LIMB_OPERATIONS_CU
+#define __COMMON_LIMB_OPERATIONS_CU
+
 #include <stdint.h>
 #include <cuda_runtime.h>
 #include <stdio.h>
@@ -302,3 +304,5 @@ __host__ __device__ inline void from_bytes(uint64_t *limbs, const uint8_t *bytes
         }
     }
 }
+
+#endif

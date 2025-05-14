@@ -55,6 +55,11 @@ __device__ G1Point G1Point::operator-()
 {
     return G1Point(this->X, -(this->Y), this->Z);
 }
+__device__ G1Point G1Point::operator-() const
+{
+    FieldG1 y(this->Y);
+    return G1Point(this->X, -y, this->Z);
+}
 // equivalent to Return = this + (-other)
 __device__ G1Point G1Point::operator-(const G1Point &other)
 {
@@ -117,6 +122,12 @@ __device__ G1Point G1Point::operator*(const unsigned long scalar32)
     return (*this) * scalar;
 }
 
+__device__ G1Point G1Point::operator*(const unsigned long scalar32) const
+{
+    Scalar scalar(scalar32);
+    G1Point ret(*this);
+    return ret * scalar;
+}
 // check if equal to infinity
 __device__ bool G1Point::is_zero()
 {

@@ -123,7 +123,7 @@ __device__ bool Scalar::is_zero()
     return is_zero_limbs(data, LIMBS);
 }
 // check if the bit_no is set (1) or not (0)
-__device__ bool Scalar::test_bit(size_t bit_no)
+__device__ bool Scalar::test_bit(size_t bit_no) const
 {
     if (bit_no >= sizeof(__uint64_t) * 8 * LIMBS)
         return false;
@@ -145,8 +145,10 @@ __device__ void Scalar::set_bit(size_t bit_no)
 }
 
 // get a unsigned int32 from bit msb_no to lsb_no
-__device__ __uint32_t Scalar::get_bits_as_uint32(size_t msb_no, size_t lsb_no)
+__device__ __uint32_t Scalar::get_bits_as_uint32(size_t msb_no, size_t lsb_no) const
 {
+    if(msb_no > 255) 
+        msb_no = 254;
     assert(msb_no - lsb_no < 32);
     size_t part1 = msb_no / (8 * sizeof(__uint64_t));
     size_t part2 = lsb_no / (8 * sizeof(__uint64_t));
@@ -169,8 +171,10 @@ __device__ __uint32_t Scalar::get_bits_as_uint32(size_t msb_no, size_t lsb_no)
     return ret;
 }
 // get a unsigned int16 from bit msb_no to lsb_no
-__device__ __uint16_t Scalar::get_bits_as_uint16(size_t msb_no, size_t lsb_no)
+__device__ __uint16_t Scalar::get_bits_as_uint16(size_t msb_no, size_t lsb_no) const
 {
+    if(msb_no > 255) 
+        msb_no = 254;
     assert(msb_no - lsb_no < 16);
     size_t part1 = msb_no / (8 * sizeof(__uint64_t));
     size_t part2 = lsb_no / (8 * sizeof(__uint64_t));

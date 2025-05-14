@@ -17,16 +17,18 @@ public:
 
     // equivalent to -1*P
     __device__ G1Point operator-();
+    __device__ G1Point operator-() const;
 
     // equivalent to Return = this + (-other)
     __device__ G1Point operator-(const G1Point &other);
-    // logical operators
+
     __device__ bool operator==(const G1Point &other);
     __device__ bool operator!=(const G1Point &other);
 
-    // equivalent to Point * integer scalar
+    // equivalent to Point*32bit scalar
     __device__ G1Point operator*(const unsigned long scalar32);
-    // single scalar multiplication
+
+    __device__ G1Point operator*(const unsigned long scalar32) const;
     __device__ G1Point operator*(const Scalar scalar);
 
 

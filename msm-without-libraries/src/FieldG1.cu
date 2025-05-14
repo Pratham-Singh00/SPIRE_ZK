@@ -258,7 +258,9 @@ __device__ FieldG1 FieldG1::inverse()
     exponent[0] -= 2;
 
     // Perform exponentiation using square-and-multiply
+    #pragma unroll 1
     for (int i = 5; i >= 0; --i) {
+        #pragma unroll 1
         for (int bit = 63; bit >= 0; --bit) {
             result = result.squared();
             if ((exponent[i] >> bit) & 1) {
