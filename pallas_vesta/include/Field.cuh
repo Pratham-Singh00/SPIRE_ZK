@@ -34,11 +34,8 @@ public:
 
     // Arithmatic operators
     __device__ Field &operator+=(const Field &other);
-    __device__ Field &operator+=(const Field &other) const;
     __device__ Field &operator-=(const Field &other);
-    __device__ Field &operator-=(const Field &other) const;
     __device__ Field &operator*=(const Field &other);
-    __device__ Field &operator*=(const Field &other) const;
     __device__ Field operator+(const Field &other);
     __device__ Field operator+(const Field &other) const;
     __device__ Field operator-(const Field &other);
