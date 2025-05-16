@@ -3,52 +3,6 @@
 
 #include <cstdio>
 
-#include "./../include/Field.cuh"
-#include "./../include/Scalar.cuh"
-
-typedef enum curves {
-    PALLAS,
-    VESTA
-} curve_type;
-
-template<curve_type T>
-struct Parameters
-{
-    const Scalar modulus;
-    const u_int64_t inv;
-    const Scalar R;
-    const Scalar R2;
-    const Scalar R3;
-    const Scalar Generator;
-    const Scalar Root_of_Unity;
-    const Scalar Delta;
-};
-
-template <>
-static struct Parameters<PALLAS>
-{
-    const Scalar modulus= Scalar(pallas::MODULUS);
-    const u_int64_t inv = pallas::INV;
-    const Scalar R = Scalar(pallas::R);
-    const Scalar R2 = Scalar(pallas::R2);
-    const Scalar R3 = Scalar(pallas::R3);
-    const Scalar Generator = Scalar(pallas::GENERATOR);
-    const Scalar Root_of_Unity = Scalar(pallas::ROOT_OF_UNITY);
-    const Scalar Delta = Scalar(pallas::DELTA);
-};
-
-template <>
-struct Parameters<VESTA>
-{
-    const Scalar modulus= Scalar(vesta::MODULUS);
-    const u_int64_t inv = vesta::INV;
-    const Scalar R = Scalar(vesta::R);
-    const Scalar R2 = Scalar(vesta::R2);
-    const Scalar R3 = Scalar(vesta::R3);
-    const Scalar Generator = Scalar(vesta::GENERATOR);
-    const Scalar Root_of_Unity = Scalar(vesta::ROOT_OF_UNITY);
-    const Scalar Delta = Scalar(vesta::DELTA);
-};
 
 // Curve constants for pallas y^2 = x^3 + 5
 namespace pallas
@@ -196,5 +150,47 @@ namespace vesta
         0x2237d54423724166,
     };
 }
+// typedef enum curves {
+//     PALLAS,
+//     VESTA
+// } curve_type;
 
+// template<curve_type T>
+// struct Parameters
+// {
+//     const Scalar modulus;
+//     const u_int64_t inv;
+//     const Scalar R;
+//     const Scalar R2;
+//     const Scalar R3;
+//     const Scalar Generator;
+//     const Scalar Root_of_Unity;
+//     const Scalar Delta;
+// };
+
+// template <>
+// static struct Parameters<PALLAS>
+// {
+//     const Scalar modulus= Scalar(pallas::MODULUS);
+//     const u_int64_t inv = pallas::INV;
+//     const Scalar R = Scalar(pallas::R);
+//     const Scalar R2 = Scalar(pallas::R2);
+//     const Scalar R3 = Scalar(pallas::R3);
+//     const Scalar Generator = Scalar(pallas::GENERATOR);
+//     const Scalar Root_of_Unity = Scalar(pallas::ROOT_OF_UNITY);
+//     const Scalar Delta = Scalar(pallas::DELTA);
+// };
+
+// template <>
+// struct Parameters<VESTA>
+// {
+//     const Scalar modulus= Scalar(vesta::MODULUS);
+//     const u_int64_t inv = vesta::INV;
+//     const Scalar R = Scalar(vesta::R);
+//     const Scalar R2 = Scalar(vesta::R2);
+//     const Scalar R3 = Scalar(vesta::R3);
+//     const Scalar Generator = Scalar(vesta::GENERATOR);
+//     const Scalar Root_of_Unity = Scalar(vesta::ROOT_OF_UNITY);
+//     const Scalar Delta = Scalar(vesta::DELTA);
+// };
 #endif

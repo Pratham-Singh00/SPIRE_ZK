@@ -4,6 +4,7 @@
 #include "./../include/Field.cuh"
 
 #include "./../utils/field-helper.cuh"
+#include "./../constants/pasta.cuh"
 
 // Constructor without any argument
 __host__ __device__ Field::Field()

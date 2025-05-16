@@ -50,7 +50,6 @@ public:
     
     // double the field element
     __device__ Field dbl();
-    __device__ Field dbl();
     // square of the field element
     __device__ Field squared();
     __device__ Field squared() const;
