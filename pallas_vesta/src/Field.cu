@@ -7,7 +7,7 @@
 #include "./../constants/pasta.cuh"
 
 // Constructor without any argument
-__host__ __device__ Field::Field()
+__device__ Field::Field()
 {
     this->data[0] = 0;
     this->data[1] = 0;
@@ -15,13 +15,22 @@ __host__ __device__ Field::Field()
     this->data[3] = 0;
 }
 
-__host__ __device__ Field::Field(u_int64_t *uint64_le, size_t len)
+__device__ Field::Field(const u_int64_t *uint64_le, size_t len)
 {
     copy_limbs(data, uint64_le, len);
     encode_montgomery();
 }
 
-__host__ __device__ Field::~Field()
+__device__ Field::Field(uint64_t val) 
+{
+    this->data[0] = val;
+    this->data[1] = 0;
+    this->data[2] = 0;
+    this->data[3] = 0;
+    encode_montgomery();
+}
+
+__device__ Field::~Field()
 {
 #ifdef __CUDA_ARCH__
     free(data);
@@ -120,6 +129,8 @@ __device__ Field &Field::operator*=(const Field &other)
     copy_limbs(data, res, LIMBS);
     return *this;
 }
+
+
 __device__ Field Field::operator+(const Field &other)
 {
     Field result;
@@ -158,7 +169,13 @@ __device__ Field Field::operator*(const Field &other) const
     result *= other;
     return result;
 }
-
+__device__ Field Field::operator*(const Scalar &other) 
+{
+    Field o(other.data);
+    Field result(*this);
+    result *= o;
+    return result;
+}
 // Negation operator
 __device__ Field Field::operator-()
 {
@@ -228,6 +245,42 @@ __device__ inline void Field::decode_montgomery()
 // find the inverse of the field element
 __device__ Field Field::inverse()
 {
+    Field base(*this);
+
+    Field result = one(); // Initialize result to 1
+
+    // Exponent: p - 2
+    // BLS12-381 modulus - 2
+    __uint64_t exponent[LIMBS];
+    copy_limbs(exponent, pallas::MODULUS, LIMBS);
+    exponent[0] -= 2;
+
+    // Perform exponentiation using square-and-multiply
+    #pragma unroll 1
+    for (int i = 5; i >= 0; --i) {
+        #pragma unroll 1
+        for (int bit = 63; bit >= 0; --bit) {
+            result = result.squared();
+            if ((exponent[i] >> bit) & 1) {
+                result = result * base;
+            }
+        }
+    }
+
+    return result;
+}
+
+__device__ Field Field::one()
+{
+    Field result;
+    copy_limbs(result.data, pallas::R, LIMBS);
+    return result;
+}
+
+
+__device__ Field Field::zero()
+{
+    return Field();
 }
 
 __host__ __device__ void Field::print()
@@ -237,4 +290,10 @@ __host__ __device__ void Field::print()
     printf("\n");
 }
 
+
+__device__ Field Field::as_scalar() 
+{
+    this->decode_montgomery();
+    return *this;
+}
 #endif

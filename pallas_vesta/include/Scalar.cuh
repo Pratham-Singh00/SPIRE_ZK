@@ -6,7 +6,7 @@ public:
     __uint64_t data[4]; // scalars are 255 bits = 32 bytes
     __device__ Scalar();
     __device__ Scalar(const unsigned long long x);
-    __device__ Scalar(const __uint64_t *bytes, size_t limbs = 4);
+    __device__ Scalar(const __uint8_t *bytes, size_t length = 32);
     __device__ Scalar(const Scalar &other);
 
     // assignment from another scalar

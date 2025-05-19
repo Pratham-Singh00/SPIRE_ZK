@@ -4,18 +4,19 @@
 #include <cstdio>
 #include <cuda_runtime.h>
 #include "./../constants/pasta.cuh"
-
+#include "Scalar.cuh"
 
 class alignas(16) Field
 {
 public:
     u_int64_t data[4];
     //Constructor without any argument 
-    __host__ __device__ Field();
-    __host__ __device__ Field(u_int64_t *uint64_le, size_t len = 4);
+    __device__ Field();
+    __device__ Field(const u_int64_t *uint64_le, size_t len = 4);
     __device__ Field(const Field &other) = default;
+    __device__ Field(uint64_t val);
 
-    __host__ __device__ ~Field() {}
+    __device__ ~Field();
 
     //Relational Operators
     __device__ bool operator==(const Field &other);
@@ -36,6 +37,9 @@ public:
     __device__ Field &operator+=(const Field &other);
     __device__ Field &operator-=(const Field &other);
     __device__ Field &operator*=(const Field &other);
+
+    __device__ Field operator*(const Scalar &other);
+
     __device__ Field operator+(const Field &other);
     __device__ Field operator+(const Field &other) const;
     __device__ Field operator-(const Field &other);
@@ -66,6 +70,12 @@ public:
     __device__ inline void decode_montgomery();
     // find the inverse of the field element 
     __device__ Field inverse();
+
+
+    __device__ Field one();
+    __device__ Field zero();
+
+    __device__ Field as_scalar();
 
     __host__ __device__ void print();
 

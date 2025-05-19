@@ -13,61 +13,56 @@
 #include <fstream>
 
 
-// Parse a big decimal string to std::vector<uint8_t> in little-endian base-256 form
-std::vector<uint8_t> parse_decimal_to_bytes(const std::string& dec_str) {
-    std::vector<uint8_t> result;
+void write_project_output_to_file(uint64_t *data, int limit = 4) {
 
-    std::string num = dec_str;
-    while (!num.empty() && num != "0") {
-        std::string quotient;
-        int remainder = 0;
-        for (char c : num) {
-            int digit = c - '0';
-            int value = remainder * 10 + digit;
-            quotient += ('0' + value / 256);
-            remainder = value % 256;
+    std::ofstream out("cu_constant_output.txt");
+    bool printStarted = false;
+    for(int i= limit -1;i>=0; i--)
+    {
+        if(printStarted) 
+        {
+            out<< std::hex << std::uppercase << std::setfill('0') << std::setw(16) <<data[i];
         }
-        result.push_back(static_cast<uint8_t>(remainder));
-        // Remove leading zeros
-        size_t first_nonzero = quotient.find_first_not_of('0');
-        num = (first_nonzero == std::string::npos) ? "" : quotient.substr(first_nonzero);
+        else 
+        {
+            if(data[i]) 
+            {
+                out << std::hex << std::uppercase <<data[i];
+                printStarted = true;
+            }
+        }
     }
-    return result;
+        
 }
 
-// Convert byte array to 4 uint64_t limbs (little endian)
-std::vector<uint64_t> bytes_to_limbs_le(const std::vector<uint8_t>& bytes) {
-    std::vector<uint64_t> limbs(4, 0);
-    for (size_t i = 0; i < bytes.size() && i < 32; ++i) {
-        size_t limb_index = i / 8;
-        limbs[limb_index] |= static_cast<uint64_t>(bytes[i]) << (8 * (i % 8));
+bool compare_two_files_output ()
+{
+    std::ifstream in_cuda("cu_constant_output.txt");
+    std::ifstream in_sage("sage_constant_output.txt");
+    std::string cu_out;
+    in_cuda>>cu_out;
+    std::string sage_out;
+    in_sage>>sage_out;
+
+    if(cu_out.size() != sage_out.size())
+        return false;
+    for(int i=0; i< cu_out.size(); i++)
+    {
+        if(cu_out[i] != sage_out[i])
+            return false;
     }
-    return limbs;
+    in_cuda.close();
+    in_sage.close();
+    return true;
 }
 
-std::string readFile(const char* filename) {
-    std::ifstream file(filename);
-    std::string decimal_str;
-    if (!file || !(file >> decimal_str)) {
-        std::cerr << "Failed to read number from file\n";
-        return "0";
-    }
-    return decimal_str;
-}
-
-uint64_t* get_data_from_file(const char* filename) {
-    std::string content = readFile(filename);
-    std::vector<uint8_t> bytes = parse_decimal_to_bytes(content);
-    std::vector<uint64_t> limbs = bytes_to_limbs_le(bytes);
-    return limbs.data();
-}
 
 class CurveConstants: public ::testing::Test
 {
 public:
     CurveConstants()
     {
-
+        
     }
     ~CurveConstants() override
     {
@@ -83,24 +78,175 @@ public:
     }
 };
 
+
+
+TEST_F(CurveConstants, check_Modulus_Pallas) 
+{
+    int ret = std::system("sage -python constant_sage.py modulus pallas");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, pallas::MODULUS, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
 TEST_F(CurveConstants, check_R_Pallas) 
 {
     int ret = std::system("sage -python constant_sage.py r pallas");
-    // if (ret != 0) 
-    // {
-    //     ASSERT_TRUE(false);
-    // }
-    uint64_t *out = get_data_from_file("sage_constant_output.txt");
-
-    for(int i=0;i<LIMBS; i++)
+    if (ret != 0) 
     {
-        printf("%016x ", out[i]);
+        ASSERT_TRUE(false);
     }
-    printf("\n");
-    for(int i=0;i<LIMBS; i++)
-    {
-        printf("%016x ", pallas::R[i]);
-    }
-    ASSERT_TRUE(equal(out, pallas::R, LIMBS));
+    uint64_t data[4];
+    cudaMemcpy(data, pallas::R, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
 }
+
+
+TEST_F(CurveConstants, check_R2_Pallas) 
+{
+    int ret = std::system("sage -python constant_sage.py r2 pallas");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, pallas::R2, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+TEST_F(CurveConstants, check_R3_Pallas) 
+{
+    int ret = std::system("sage -python constant_sage.py r3 pallas");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, pallas::R3, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+TEST_F(CurveConstants, check_Generator_Pallas) 
+{
+    int ret = std::system("sage -python constant_sage.py generator pallas");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, pallas::GENERATOR, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+TEST_F(CurveConstants, check_Inv_Pallas) 
+{
+    int ret = std::system("sage -python constant_sage.py inv pallas");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, &pallas::INV, sizeof(uint64_t), cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data, 1);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+TEST_F(CurveConstants, check_Modulus_Vesta) 
+{
+    int ret = std::system("sage -python constant_sage.py modulus vesta");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, vesta::MODULUS, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+TEST_F(CurveConstants, check_R_Vesta) 
+{
+    int ret = std::system("sage -python constant_sage.py r vesta");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, vesta::R, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+TEST_F(CurveConstants, check_R2_Vesta) 
+{
+    int ret = std::system("sage -python constant_sage.py r2 vesta");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, vesta::R2, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+TEST_F(CurveConstants, check_R3_Vesta) 
+{
+    int ret = std::system("sage -python constant_sage.py r3 vesta");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, vesta::R3, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+TEST_F(CurveConstants, check_Generator_Vesta) 
+{
+    int ret = std::system("sage -python constant_sage.py generator vesta");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, vesta::GENERATOR, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+TEST_F(CurveConstants, check_Inv_Vesta) 
+{
+    int ret = std::system("sage -python constant_sage.py inv vesta");
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    uint64_t data[4];
+    cudaMemcpy(data, &vesta::INV, sizeof(uint64_t), cudaMemcpyDeviceToHost);
+    write_project_output_to_file(data, 1);
+    ASSERT_TRUE(compare_two_files_output());
+}
+
+
+
 #endif

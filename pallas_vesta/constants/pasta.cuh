@@ -7,22 +7,22 @@
 // Curve constants for pallas y^2 = x^3 + 5
 namespace pallas
 {
-    char *base_modulus = "28948022309329048855892746252171976963363056481941560715954676764349967630337";
-    char *r_modulus = "28948022309329048855892746252171976963363056481941647379679742748393362948097";
+    // char *base_modulus = "28948022309329048855892746252171976963363056481941560715954676764349967630337";
+    // char *r_modulus = "28948022309329048855892746252171976963363056481941647379679742748393362948097";
 
     /// Constant representing the modulus
     /// p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001
-    const u_int64_t MODULUS[] = {
+    __device__ const u_int64_t MODULUS[] = {
         0x992d30ed00000001,
         0x224698fc094cf91b,
         0x0000000000000000,
         0x4000000000000000,
     };
     /// INV = -(p^{-1} mod 2^64) mod 2^64
-    const u_int64_t INV = 0x992d30ecffffffff;
+    __device__ const u_int64_t INV = 0x992d30ecffffffff;
 
     /// R = 2^256 mod p
-    const u_int64_t R[] = {
+    __device__ const u_int64_t R[] = {
         0x34786d38fffffffd,
         0x992c350be41914ad,
         0xffffffffffffffff,
@@ -30,7 +30,7 @@ namespace pallas
     };
 
     /// R^2 = 2^512 mod p
-    const u_int64_t R2[] = {
+    __device__ const u_int64_t R2[] = {
         0x8c78ecb30000000f,
         0xd7d30dbd8b0de0e7,
         0x7797a99bc3c95d18,
@@ -38,7 +38,7 @@ namespace pallas
     };
 
     /// R^3 = 2^768 mod p
-    const u_int64_t R3[] = {
+    __device__ const u_int64_t R3[] = {
         0xf185a5993a9e10f9,
         0xf6a68f3b6ac5b1d1,
         0xdf8d1014353fd42c,
@@ -47,19 +47,19 @@ namespace pallas
 
     /// `GENERATOR = 5 mod p` is a generator of the `p - 1` order multiplicative
     /// subgroup, or in other words a primitive root of the field.
-    const u_int64_t GENERATOR[] = {
+    __device__ const u_int64_t GENERATOR[] = {
         0x0000000000000005,
         0x0000000000000000,
         0x0000000000000000,
         0x0000000000000000,
     };
 
-    const u_int64_t u32 = 32;
+    __device__ const u_int64_t u32 = 32;
 
     /// GENERATOR^t where t * 2^s + 1 = p
     /// with t odd. In other words, this
     /// is a 2^s root of unity.
-    const u_int64_t ROOT_OF_UNITY[] = {
+    __device__ const u_int64_t ROOT_OF_UNITY[] = {
         0xbdad6fabd87ea32f,
         0xea322bf2b7bb7584,
         0x362120830561f81a,
@@ -69,7 +69,7 @@ namespace pallas
     /// GENERATOR^{2^s} where t * 2^s + 1 = p
     /// with t odd. In other words, this
     /// is a t root of unity.
-    const u_int64_t DELTA[] = {
+    __device__ const u_int64_t DELTA[] = {
         0x6a6ccd20dd7b9ba2,
         0xf5e4f3f13eee5636,
         0xbd455b7112a5049d,
@@ -81,22 +81,22 @@ namespace pallas
 // Curve constants for vesta y^2 = x^3 + 5
 namespace vesta
 {
-    char *r_modulus = "28948022309329048855892746252171976963363056481941560715954676764349967630337";
-    char *base_modulus = "28948022309329048855892746252171976963363056481941647379679742748393362948097";
+    // char *r_modulus = "28948022309329048855892746252171976963363056481941560715954676764349967630337";
+    // char *base_modulus = "28948022309329048855892746252171976963363056481941647379679742748393362948097";
 
     /// Constant representing the modulus
     /// q = 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
-    const u_int64_t MODULUS[] = {
+    __device__ const u_int64_t MODULUS[] = {
         0x8c46eb2100000001,
         0x224698fc0994a8dd,
         0x0,
         0x4000000000000000,
     };
     /// INV = -(q^{-1} mod 2^64) mod 2^64
-    const u_int64_t INV = 0x8c46eb20ffffffff;
+    __device__ const u_int64_t INV = 0x8c46eb20ffffffff;
 
     /// R = 2^256 mod q
-    const u_int64_t R[] = {
+    __device__ const u_int64_t R[] = {
         0x5b2b3e9cfffffffd,
         0x992c350be3420567,
         0xffffffffffffffff,
@@ -104,7 +104,7 @@ namespace vesta
     };
 
     /// R^2 = 2^512 mod q
-    const u_int64_t R2[] = {
+    __device__ const u_int64_t R2[] = {
         0xfc9678ff0000000f,
         0x67bb433d891a16e3,
         0x7fae231004ccf590,
@@ -112,7 +112,7 @@ namespace vesta
     };
 
     /// R^3 = 2^768 mod q
-    const u_int64_t R3[] = {
+    __device__ const u_int64_t R3[] = {
         0x008b421c249dae4c,
         0xe13bda50dba41326,
         0x88fececb8e15cb63,
@@ -121,19 +121,19 @@ namespace vesta
 
     /// `GENERATOR = 5 mod q` is a generator of the `q - 1` order multiplicative
     /// subgroup, or in other words a primitive root of the field.
-    const u_int64_t GENERATOR[] = {
+    __device__ const u_int64_t GENERATOR[] = {
         0x0000000000000005,
         0x0000000000000000,
         0x0000000000000000,
         0x0000000000000000,
     };
 
-    const u_int64_t S = 32;
+    __device__ const u_int64_t S = 32;
 
     /// GENERATOR^t where t * 2^s + 1 = q
     /// with t odd. In other words, this
     /// is a 2^s root of unity.
-    const u_int64_t ROOT_OF_UNITY[] = {
+    __device__ const u_int64_t ROOT_OF_UNITY[] = {
         0xa70e2c1102b6d05f,
         0x9bb97ea3c106f049,
         0x9e5c4dfd492ae26e,
@@ -143,7 +143,7 @@ namespace vesta
     /// GENERATOR^{2^s} where t * 2^s + 1 = q
     /// with t odd. In other words, this
     /// is a t root of unity.
-    const u_int64_t DELTA[] = {
+    __device__ const u_int64_t DELTA[] = {
         0x8494392472d1683c,
         0xe3ac3376541d1140,
         0x06f0a88e7f7949f8,

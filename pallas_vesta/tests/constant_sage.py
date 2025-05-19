@@ -49,6 +49,6 @@ if __name__ == "__main__":
         F, MODULUS = get_field(args.curve.lower())
         value = get_value(args.param.lower(), F, MODULUS)
         with open("sage_constant_output.txt", "w") as f:
-            f.write(str(value))
+            f.write(f"{value:X}")
     except ValueError as e:
         print(f"Error: {e}")

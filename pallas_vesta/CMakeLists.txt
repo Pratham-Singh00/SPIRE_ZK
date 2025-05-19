@@ -6,10 +6,25 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 
 # Set CUDA architectures if needed
-# set(CMAKE_CUDA_ARCHITECTURES 75)  # For RTX 3060 (Ampere)
+set(CMAKE_CUDA_ARCHITECTURES 86)
 
 # Add main source
 add_executable(main_exec src/main.cu)
+
+# Enable CUDA separable compilation and relocatable device code
+set_target_properties(main_exec PROPERTIES
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON
+    CUDA_ARCHITECTURES 86
+)
+
+# Set compile features
+target_compile_features(main_exec PUBLIC cxx_std_17)
+
+# Add NVCC-specific compile options
+target_compile_options(main_exec PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda -rdc=true>
+)
 
 # Fetch GoogleTest
 include(FetchContent)
@@ -31,8 +46,11 @@ add_executable(cuda_tests ${TEST_SOURCES})
 # Link GTest and CUDA
 target_link_libraries(cuda_tests gtest_main)
 target_compile_features(cuda_tests PUBLIC cxx_std_17)
-set_target_properties(cuda_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
+set_target_properties(cuda_tests PROPERTIES 
+                      CUDA_SEPARABLE_COMPILATION ON
+                      CUDA_ARCHITECTURES 86
+                    )
+                    
 # Add include directories if needed
 target_include_directories(cuda_tests PRIVATE src)
 
