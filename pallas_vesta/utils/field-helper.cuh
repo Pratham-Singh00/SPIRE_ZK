@@ -7,7 +7,7 @@
 
 #define LIMBS 4
 
-__host__ __device__ inline bool is_zero_limbs(const uint64_t *limbs, int n)
+__host__ __device__ __forceinline__ bool is_zero_limbs(const uint64_t *limbs, int n)
 {
 #pragma unroll
     for (int i = 0; i < n; ++i)
@@ -18,7 +18,7 @@ __host__ __device__ inline bool is_zero_limbs(const uint64_t *limbs, int n)
     return true;
 }
 
-__host__ __device__ inline bool equal(const uint64_t *a, const uint64_t *b, int n)
+__host__ __device__ __forceinline__ bool equal(const uint64_t *a, const uint64_t *b, int n)
 {
 #pragma unroll
     for (int i = 0; i < n; ++i)
@@ -29,16 +29,16 @@ __host__ __device__ inline bool equal(const uint64_t *a, const uint64_t *b, int 
     return true;
 }
 
-__host__ __device__ inline void copy_limbs(uint64_t *dest, const uint64_t *src, int n)
+__host__ __device__ __forceinline__ void copy_limbs(uint64_t *dest, const uint64_t *src, int n)
 {
-#pragma unroll
+// #pragma unroll
     for (int i = 0; i < n; ++i)
     {
         dest[i] = src[i];
     }
 }
 
-__host__ __device__ inline void add_limbs(uint64_t *res, const uint64_t *a, const uint64_t *b, int n)
+__host__ __device__ __forceinline__ void add_limbs(uint64_t *res, const uint64_t *a, const uint64_t *b, int n)
 {
     uint64_t carry = 0;
     for (int i = 0; i < n; ++i)
@@ -49,7 +49,7 @@ __host__ __device__ inline void add_limbs(uint64_t *res, const uint64_t *a, cons
     }
 }
 
-__host__ __device__ inline bool sub_limbs(uint64_t *res, const uint64_t *a, const uint64_t *b, int n)
+__host__ __device__ __forceinline__ bool sub_limbs(uint64_t *res, const uint64_t *a, const uint64_t *b, int n)
 {
     uint64_t borrow = 0;
     for (int i = 0; i < n; ++i)
@@ -66,7 +66,7 @@ __host__ __device__ inline bool sub_limbs(uint64_t *res, const uint64_t *a, cons
 
 
 
-__host__ __device__ inline void conditional_subtract(uint64_t *res, const uint64_t *modulus, int n)
+__host__ __device__ __forceinline__ void conditional_subtract(uint64_t *res, const uint64_t *modulus, int n)
 {
     uint64_t tmp[2 * LIMBS];
     bool borrow = sub_limbs(tmp, res, modulus, n);
@@ -87,7 +87,7 @@ __host__ __device__ inline void shr1(uint64_t *res, const uint64_t *a, int n)
     }
 }
 
-__device__ inline ulong mac_with_carry(ulong a, ulong b, ulong c, ulong *d)
+__device__ __forceinline__ ulong mac_with_carry(ulong a, ulong b, ulong c, ulong *d)
 {
     ulong lo, hi;
     asm(
@@ -102,7 +102,7 @@ __device__ inline ulong mac_with_carry(ulong a, ulong b, ulong c, ulong *d)
 }
 
 // Returns a + b, puts the carry in d
-__device__ inline ulong add_with_carry(ulong a, ulong *b)
+__device__ __forceinline__ ulong add_with_carry(ulong a, ulong *b)
 {
     ulong lo, hi;
     asm(

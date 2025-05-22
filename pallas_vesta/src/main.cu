@@ -50,33 +50,33 @@ struct Mem
 
 __global__ void test_one()
 {
+
+    printf("Debug 0\n");
     Point g;
     g = g.one();
+    printf("debug 0\n");
     g.print();
+    printf("Debug 1\n");
+    Point s;
+    printf("Debug 2\n");
+    s = g.dbl();
+    s.print();
+    s = s + g;
+    s.print();
 }
 
 int main(int argc, char* argv[])
 {
     printf("Hello world\n");
-    if (argc < 2) {
-		printf("Please enter the MSM scales (e.g. 20 represents 2^20) \n");
-		return 1;
-	}
-
-    // int log_size = atoi(argv[1]);
-    // size_t num_v = (size_t) (1 << log_size);
-
-    // int deviceCount;
-    // cudaGetDeviceCount( &deviceCount );
-    // CUTThread  thread[deviceCount];
-
-    // Mem device[deviceCount];
-
-    // for(int i=0; i< deviceCount; i++)
-    //     start_thread(init_msm_params, &device[i]);
-
+   
     test_one<<<1,1>>>();
     cudaDeviceSynchronize();
+    cudaError_t t = cudaGetLastError();
+    if(t != cudaSuccess)
+    {
+        printf("Cuda Error: %s \n", cudaGetErrorString(t));
+        printf("Peek: %s\n", cudaGetErrorString(cudaPeekAtLastError()));
+    }
     return 0;
 }
 

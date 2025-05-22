@@ -19,7 +19,10 @@ __device__ Field::Field(const u_int64_t *uint64_le, size_t len)
     copy_limbs(data, uint64_le, len);
     encode_montgomery();
 }
-
+__device__ Field::Field(const Field &other)
+{
+    copy_limbs(data, other.data, LIMBS);
+}
 __device__ Field::Field(uint64_t val) 
 {
     this->data[0] = val;
@@ -129,7 +132,11 @@ __device__ Field &Field::operator*=(const Field &other)
     return *this;
 }
 
-
+__device__ Field &Field::operator=(const Field &other)
+{
+    copy_limbs(data, other.data, LIMBS);
+    return *this;
+}
 __device__ Field Field::operator+(const Field &other)
 {
     Field result;
@@ -279,7 +286,9 @@ __device__ Field Field::one()
 
 __device__ Field Field::zero()
 {
-    return Field();
+    Field x;
+    assert(x.is_zero() == true);
+    return x;
 }
 
 __host__ __device__ void Field::print()

@@ -1,5 +1,5 @@
-#ifndef __G1POINT_CUH
-#define __G1POINT_CUH
+#ifndef __POINT_CUH
+#define __POINT_CUH
 
 #include "Field.cuh"
 class alignas(16) Point
@@ -9,7 +9,12 @@ public:
     // constructor without any argument, set point to infinity
     __device__ Point();
     // initialize the points with x,y,z field values
-    __device__ Point(Field x, Field y, Field z);
+    __device__ Point(const Field &x, const Field &y, const Field &z);
+
+    __device__ Point(const Point &other);
+
+    // assignment operator
+    __device__ Point& operator=(const Point &other);
 
     // add is equal to addition in jacobian
     __device__ Point operator+(const Point &other);

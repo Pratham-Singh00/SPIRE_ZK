@@ -8,11 +8,11 @@
 class alignas(16) Field
 {
 public:
-    u_int64_t data[4];
+    __device__ u_int64_t data[4];
     //Constructor without any argument 
     __device__ Field();
     __device__ Field(const u_int64_t *uint64_le, size_t len = 4);
-    __device__ Field(const Field &other) = default;
+    __device__ Field(const Field &other);
     __device__ Field(uint64_t val);
 
     __device__ ~Field();
@@ -29,7 +29,7 @@ public:
     __device__ bool operator<=(const Field &other) const;
 
     //Assignment operators
-    __device__ Field &operator=(const Field &other) = default;
+    __device__ Field &operator=(const Field &other);
     
 
     // Arithmatic operators

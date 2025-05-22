@@ -6,18 +6,39 @@
 
 __device__ Point::Point()
 {
+    printf("Inside constructor of Point\n");
     this->X = this->X.zero();
+    printf("Debug point 1\n");
     this->Y = this->Y.one();
+    printf("Debug point 2\n");
     this->Z = this->Z.zero();
+    printf("Debug point 3\n");
 }
 // initialize the points with x,y,z field values
-__device__ Point::Point(Field x, Field y, Field z)
+__device__ Point::Point(const Field &x, const Field &y, const Field &z)
 {
+    printf("inside point constructor with params\n");
     this->X = x;
+    printf("Debug p 1\n");
     this->Y = y;
+    printf("Debug p 2\n");
     this->Z = z;
+    printf("Debug p 3\n");
 }
-
+__device__ Point::Point(const Point &other)
+{
+    this->X = other.X;
+    this->Y = other.Y;
+    this->Z = other.Z;
+}
+__device__ Point& Point::operator=(const Point &other)
+{
+    printf("Came here?\n");
+    this->X = other.X;
+    this->Y = other.Y;
+    this->Z = other.Z;
+    return *this;
+}
 // add is equal to addition in jacobian
 __device__ Point Point::operator+(const Point &other)
 {
@@ -143,13 +164,18 @@ __device__ Point Point::zero()
 __device__ Point Point::one()
 {
     Field x, y, z;
+    Point res;
     x.data[0] = 1;
     y.data[0] = 2;
     z.data[0] = 1;
     x.encode_montgomery();
     y.encode_montgomery();
     z.encode_montgomery();
-    return Point(-x,y,z);
+    res.X = -x;
+    res.Y = y;
+    res.Z = z;
+    printf("Came here inside one?\n");
+    return res;
 }
 // Get a random point
 __device__ Point Point::random()

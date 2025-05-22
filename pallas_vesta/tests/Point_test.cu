@@ -22,39 +22,90 @@ void write_limbs_to_file(std::ofstream &out, uint64_t *data, int limit = 4) {
     }
     out<<" ";
 }
-void write_point_to_file(Point *a, char *filename)
+__global__ void get_point_to_array(uint64_t *a, uint64_t *b, uint64_t *c, Point *p)
+{
+    p->X.decode_montgomery();
+    p->Y.decode_montgomery();
+    p->Z.decode_montgomery();
+    for(int i=0;i<4;i++)
+        a[i] = p->X.data[i];
+    
+    for(int i=0;i<4;i++)
+        b[i] = p->Y.data[i];
+
+    for(int i=0;i<4;i++)
+        c[i] = p->Z.data[i];
+    p->X.encode_montgomery();
+    p->Y.encode_montgomery();
+    p->Z.encode_montgomery();
+}
+void write_point_to_file(Point *p, const char *filename)
 {
     std::ofstream out(filename);
-    uint64_t data[4];
-    cudaMemcpy(data, a->X.data, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
-    write_limbs_to_file(out, data);
-    cudaMemcpy(data, a->Y.data, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
-    write_limbs_to_file(out, data);
-    cudaMemcpy(data, a->Z.data, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
-    write_limbs_to_file(out, data);
+    uint64_t x[4],y[4],z[4];
+    uint64_t *a,*b,*c;
+    cudaMalloc(&a, sizeof(uint64_t)*4);
+    cudaMalloc(&b, sizeof(uint64_t)*4);
+    cudaMalloc(&c, sizeof(uint64_t)*4);
+    get_point_to_array<<<1,1>>>(a,b,c, p);
+    CUDA_CHECK(cudaMemcpy(x, a, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(y, b, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(z, c, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaDeviceSynchronize());
+    write_limbs_to_file(out, x);
+    write_limbs_to_file(out, y);
+    write_limbs_to_file(out, z);
+    out.close();
+}
+
+bool compare_two_files_output (const char * file1, const char *file2)
+{
+    std::ifstream in_cuda(file1);
+    std::ifstream in_sage(file2);
+    std::string cu_out;
+    in_cuda>>cu_out;
+    std::string sage_out;
+    in_sage>>sage_out;
+    
+    if(cu_out.size() != sage_out.size())
+        return false;
+    for(int i=0; i< cu_out.size(); i++)
+    {
+        if(cu_out[i] != sage_out[i])
+            return false;
+    }
+    in_cuda.close();
+    in_sage.close();
+    return true;
 }
 
 __global__ void add_kernel(Point *a, Point *b, Point *res)
 {
     *res = *a + *b;
+    res->to_affine();
+    res->print();
 }
 __global__ void multiplication_kernel(Point *a, Scalar *s, Point *res)
 {
     *res = (*a) * (*s);
+    res->to_affine();
 }
 
 __global__ void multiplication_kernel2(Point *a, uint64_t s, Point *res)
 {
     *res = (*a) * s;
+    res->to_affine();
 }
 __global__ void double_kernel(Point *a, Point *res)
 {
     *res = a->dbl();
+    res->to_affine();
 }
 __global__ void mixed_add_kernel(Point *a, Point *b, Point *res)
 {
     b->to_affine();
     *res = a->mixed_add(*b);
+    res->to_affine();
 }
 __global__ void check_wellformed_kernel(Point *a, bool *result)
 {
@@ -78,19 +129,35 @@ __global__ void is_not_equal_kernel(Point *a, Point *b, bool *result)
 }
 
 
-__global__ void init_test(Point *a)
+__global__ void init_one(Point *a)
 {
-    *a = Point().one();
-    a->print();
+    Point x;
+    x = a->one();
+    printf("One\n");
+    x.print();
+    Point b;
+    b = x.dbl();
+    printf("Two\n");
+    b.print();
+    b = b + x;
+    printf("Three\n");
+    b.print();
 }
+
+const char *file_sage_add = "point_output_add.txt";
+const char *file_sage_multi = "point_output_multi.txt";
+const char *file_sage_dbl = "point_output_dbl.txt";
+const char *file_sage_generate = "point_output_generate.txt";
+const char *file_cuda_add = "cuda_point_output_add.txt";
+const char *file_cuda_multi = "cuda_point_output_multi.txt";
+const char *file_cuda_dbl = "cuda_point_output_dbl.txt";
+const char *file_cuda_generate = "cuda_point_output_generate.txt";
+
 class PointTests : public ::testing::Test
 {
 public:
-    Point *one;
     PointTests()
     {
-        init_test<<<1,1>>>(one);
-        cudaDeviceSynchronize();
     }
     ~PointTests()
     {
@@ -106,14 +173,62 @@ public:
     }
 };
 
-TEST_F(PointTests, check_Point_addition)
+TEST_F(PointTests, check_point_uint64_multiplication)
 {
-
-    init_test<<<1,1>>>(one);
+    Point *a, *b, *res, *one;
+    CUDA_CHECK(cudaMalloc(&one, sizeof(Point)));
+    CUDA_CHECK(cudaMalloc(&a, sizeof(Point)));
+    CUDA_CHECK(cudaMalloc(&b, sizeof(Point)));
+    CUDA_CHECK(cudaMalloc(&res, sizeof(Point)));
+    size_t multiplier1 = rand() + 1;
+    init_one<<<1,1>>>(one);
     cudaDeviceSynchronize();
-    //one->is_well_formed();
-    ASSERT_TRUE(true);
+    printf("Here?\n");
+    multiplication_kernel2<<<1,1>>>(one, multiplier1, a);
+
+    std::string cmd = "sage -python point_sage.py pallas multi 1 1 ";
+    cmd  = cmd + std::to_string(multiplier1);
+
+    int ret = std::system(cmd.c_str());
+    if (ret != 0) 
+    {
+        ASSERT_TRUE(false);
+    }
+    cudaDeviceSynchronize();
+    write_point_to_file(a, file_cuda_multi);
+
+    ASSERT_TRUE(compare_two_files_output(file_cuda_multi, file_sage_multi));
 }
+
+// TEST_F(PointTests, check_Point_addition)
+// {
+//     Point *a, *b, *res, *one;
+//     cudaMalloc(&one, sizeof(Point));
+//     cudaMalloc(&a, sizeof(Point));
+//     cudaMalloc(&b, sizeof(Point));
+//     cudaMalloc(&res, sizeof(Point));
+//     size_t multiplier1 = rand() + 1;
+//     size_t multiplier2 = rand() + 1;
+
+//     init_one<<<1,1>>>(one);
+//     cudaDeviceSynchronize();
+//     multiplication_kernel2<<<1,1>>>(one, multiplier1, a);
+//     multiplication_kernel2<<<1,1>>>(one, multiplier2, b);
+//     cudaDeviceSynchronize();
+//     add_kernel<<<1,1>>>(a,b,res);
+//     std::string cmd = "sage -python point_sage.py pallas add 1 ";
+//     cmd  = cmd + std::to_string(multiplier1) + " " + std::to_string(multiplier2);
+    
+//     int ret = std::system(cmd.c_str());
+//     if (ret != 0) 
+//     {
+//         ASSERT_TRUE(false);
+//     }
+//     cudaDeviceSynchronize();
+//     write_point_to_file(res, file_cuda_add);
+
+//     ASSERT_TRUE(compare_two_files_output(file_cuda_add, file_sage_add));
+// }
 
 
 #endif

@@ -65,3 +65,4 @@ target_compile_options(cuda_tests PRIVATE
 include(GoogleTest)
 gtest_discover_tests(cuda_tests)
 configure_file(tests/constant_sage.py constant_sage.py COPYONLY)
+configure_file(tests/point_sage.py point_sage.py COPYONLY)

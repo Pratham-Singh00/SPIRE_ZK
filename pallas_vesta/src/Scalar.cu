@@ -204,7 +204,7 @@ __device__ __uint16_t Scalar::get_bits_as_uint16(size_t msb_no, size_t lsb_no) c
 // the bit number of the first set (1) bit. LSB is bit no 1 and MSB is bit no 255 (scalars can be at most 255 bits long)
 __device__ size_t Scalar::most_significant_set_bit_no()
 {
-    for (int i = 254; i >= 0; i--)
+    for (int i = 255; i >= 0; i--)
         if (test_bit(i))
             return i + 1;
     return 0;
