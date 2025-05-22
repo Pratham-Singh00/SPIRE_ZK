@@ -3,7 +3,6 @@
 
 #include <cstdio>
 #include <cuda_runtime.h>
-#include "./../constants/pasta.cuh"
 #include "Scalar.cuh"
 
 class alignas(16) Field

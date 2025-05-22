@@ -1,0 +1,11 @@
+#pragma once
+#include <gtest/gtest.h>
+#include <cuda_runtime.h>
+#include "./../include/Point.cuh"
+#include "./../utils/field-helper.cuh"
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+#include <iostream>
+#include <string>
+#include <fstream>

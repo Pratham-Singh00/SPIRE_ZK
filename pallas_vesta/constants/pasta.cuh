@@ -1,5 +1,7 @@
-#ifndef __PARAMS_CUH
-#define __PARAMS_CUH
+#pragma once
+
+#ifndef PARAMS_CUH
+#define PARAMS_CUH
 
 #include <cstdio>
 

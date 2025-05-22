@@ -115,6 +115,12 @@ __device__ Point Point::operator*(Scalar sc)
     return result;
 }
 
+__device__ Point Point::operator*(const unsigned long scalar32)
+{
+    return *this * scalar32;
+}
+
+
 __device__ Point Point::operator*(const unsigned long scalar32) const
 {
     Scalar scalar(scalar32);
@@ -143,7 +149,7 @@ __device__ Point Point::one()
     x.encode_montgomery();
     y.encode_montgomery();
     z.encode_montgomery();
-    return Point(x,y,z);
+    return Point(-x,y,z);
 }
 // Get a random point
 __device__ Point Point::random()

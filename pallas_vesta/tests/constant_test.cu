@@ -1,17 +1,7 @@
 #ifndef __CONSTANT_UNIT_TEST
 #define __CONSTANT_UNIT_TEST
 
-#include <gtest/gtest.h>
-#include <cuda_runtime.h>
-#include "./../constants/pasta.cuh"
-#include "./../utils/field-helper.cuh"
-#include <cstdlib>
-#include <cstring>
-#include <vector>
-#include <iostream>
-#include <string>
-#include <fstream>
-
+#include "test_header.cuh"
 
 void write_project_output_to_file(uint64_t *data, int limit = 4) {
 
@@ -43,7 +33,7 @@ bool compare_two_files_output ()
     in_cuda>>cu_out;
     std::string sage_out;
     in_sage>>sage_out;
-
+    
     if(cu_out.size() != sage_out.size())
         return false;
     for(int i=0; i< cu_out.size(); i++)
@@ -62,7 +52,7 @@ class CurveConstants: public ::testing::Test
 public:
     CurveConstants()
     {
-        
+
     }
     ~CurveConstants() override
     {
@@ -89,6 +79,7 @@ TEST_F(CurveConstants, check_Modulus_Pallas)
     }
     uint64_t data[4];
     cudaMemcpy(data, pallas::MODULUS, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }

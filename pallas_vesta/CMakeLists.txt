@@ -8,8 +8,15 @@ set(CMAKE_CUDA_STANDARD 17)
 # Set CUDA architectures if needed
 set(CMAKE_CUDA_ARCHITECTURES 86)
 
+# add_library(memory_obj OBJECT include/memory.cu)
+# set_target_properties(memory_obj PROPERTIES
+#     CUDA_SEPARABLE_COMPILATION ON
+# )
+# target_compile_options(memory_obj PRIVATE
+#     $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda -rdc=true>
+# )
 # Add main source
-add_executable(main_exec src/main.cu)
+add_executable(main_exec src/main.cu)#  $<TARGET_OBJECTS:memory_obj>)
 
 # Enable CUDA separable compilation and relocatable device code
 set_target_properties(main_exec PROPERTIES
@@ -37,22 +44,22 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-# Glob all *_test.cu files in tests/
-file(GLOB TEST_SOURCES CONFIGURE_DEPENDS tests/*_test.cu)
+add_executable(cuda_tests tests/test_runner.cu)
 
-# Add test executable
-add_executable(cuda_tests ${TEST_SOURCES})
-
-# Link GTest and CUDA
-target_link_libraries(cuda_tests gtest_main)
+target_link_libraries(cuda_tests PRIVATE gtest gtest_main)
 target_compile_features(cuda_tests PUBLIC cxx_std_17)
 set_target_properties(cuda_tests PROPERTIES 
                       CUDA_SEPARABLE_COMPILATION ON
                       CUDA_ARCHITECTURES 86
                     )
+target_compile_options(cuda_tests PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda -rdc=true>
+)
+
                     
-# Add include directories if needed
-target_include_directories(cuda_tests PRIVATE src)
+# # Add include directories if needed
+# target_include_directories(cuda_tests PRIVATE src)
+# target_include_directories(cuda_tests PRIVATE include)
 
 # Test discovery
 include(GoogleTest)
