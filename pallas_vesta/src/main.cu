@@ -2,6 +2,8 @@
 #define __MAIN_RUN
 
 #include <stdio.h>
+
+#include "./../include/Field.cuh"
 #include "./../include/Point.cuh"
 
 
@@ -51,18 +53,22 @@ struct Mem
 __global__ void test_one()
 {
 
-    printf("Debug 0\n");
-    Point g;
+    Point g, s, t;
     g = g.one();
-    printf("debug 0\n");
+    printf("One\n");
     g.print();
-    printf("Debug 1\n");
-    Point s;
-    printf("Debug 2\n");
+    printf("Well formed: %d\n", g.is_well_formed());
+
     s = g.dbl();
+    printf("Two\n");
+    s.to_affine();
     s.print();
+    printf("Well formed: %d\n", s.is_well_formed());
     s = s + g;
+    printf("Three\n");
+    s.to_affine();
     s.print();
+
 }
 
 int main(int argc, char* argv[])

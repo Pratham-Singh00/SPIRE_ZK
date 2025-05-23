@@ -15,7 +15,6 @@ public:
     __device__ Field(const Field &other);
     __device__ Field(uint64_t val);
 
-    __device__ ~Field();
 
     //Relational Operators
     __device__ bool operator==(const Field &other);
@@ -76,7 +75,7 @@ public:
 
     __device__ Field as_scalar();
 
-    __host__ __device__ void print();
+    __device__ void print();
 
 };
 

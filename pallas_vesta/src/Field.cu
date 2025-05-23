@@ -21,7 +21,7 @@ __device__ Field::Field(const u_int64_t *uint64_le, size_t len)
 }
 __device__ Field::Field(const Field &other)
 {
-    copy_limbs(data, other.data, LIMBS);
+    copy_limbs(data, other.data, 4);
 }
 __device__ Field::Field(uint64_t val) 
 {
@@ -32,23 +32,14 @@ __device__ Field::Field(uint64_t val)
     encode_montgomery();
 }
 
-__device__ Field::~Field()
-{
-#ifdef __CUDA_ARCH__
-    free(data);
-#else
-    cudaFree(data);
-#endif
-}
-
 // Relational Operators
 __device__ bool Field::operator==(const Field &other)
 {
-    return equal(data, other.data, LIMBS);
+    return equal(data, other.data, 4);
 }
 __device__ bool Field::operator==(const Field &other) const
 {
-    return equal(data, other.data, LIMBS);
+    return equal(data, other.data, 4);
 }
 __device__ bool Field::operator!=(const Field &other)
 {
@@ -59,9 +50,9 @@ __device__ bool Field::operator!=(const Field &other) const
     return !(operator==(other));
 }
 
-__device__ bool is_greater_than_or_equal(const u_int64_t *a, const u_int64_t *b)
+__device__ __forceinline__ bool is_greater_than_or_equal(const u_int64_t *a, const u_int64_t *b)
 {
-    for (int i = LIMBS - 1; i >= 0; i--)
+    for (int i = 4 - 1; i >= 0; i--)
     {
         if (a[i] > b[i])
             return true;
@@ -79,9 +70,9 @@ __device__ bool Field::operator>=(const Field &other) const
     return is_greater_than_or_equal(data, other.data);
 }
 
-__device__ bool is_less_than_or_equal(const u_int64_t *a, const u_int64_t *b)
+__device__ __forceinline__ bool is_less_than_or_equal(const u_int64_t *a, const u_int64_t *b)
 {
-    for (int i = LIMBS - 1; i >= 0; i--)
+    for (int i = 4 - 1; i >= 0; i--)
     {
         if (a[i] < b[i])
             return true;
@@ -103,52 +94,50 @@ __device__ bool Field::operator<=(const Field &other) const
 // Arithmatic operators
 __device__ Field &Field::operator+=(const Field &other)
 {
-    add_limbs(this->data, this->data, other.data, LIMBS);
-    conditional_subtract(this->data, pallas::MODULUS, LIMBS);
+    add_limbs(this->data, this->data, other.data, 4);
+    conditional_subtract(this->data, pallas::MODULUS, 4);
     return *this;
 }
 __device__ Field &Field::operator-=(const Field &other)
 {
-    __uint64_t res[LIMBS];
-    bool borrow = sub_limbs(res, this->data, other.data, LIMBS);
+    __uint64_t res[4];
+    bool borrow = sub_limbs(res, this->data, other.data, 4);
     if (borrow)
     {
-        add_limbs(this->data, pallas::MODULUS, this->data, LIMBS);
-        sub_limbs(this->data, this->data, other.data, LIMBS);
+        add_limbs(this->data, pallas::MODULUS, this->data, 4);
+        sub_limbs(this->data, this->data, other.data, 4);
     }
     else
     {
-        copy_limbs(this->data, res, LIMBS);
+        copy_limbs(this->data, res, 4);
     }
-    conditional_subtract(this->data, pallas::MODULUS, LIMBS);
+    conditional_subtract(this->data, pallas::MODULUS, 4);
     return *this;
 }
 __device__ Field &Field::operator*=(const Field &other)
 {
-    __uint64_t res[2 * LIMBS];
-    mont_mul(res, this->data, other.data, pallas::MODULUS, pallas::INV, LIMBS);
-    conditional_subtract(res, pallas::MODULUS, LIMBS);
-    copy_limbs(data, res, LIMBS);
+    __uint64_t res[2 * 4];
+    mont_mul(res, this->data, other.data, pallas::MODULUS, pallas::INV, 4);
+    conditional_subtract(res, pallas::MODULUS, 4);
+    copy_limbs(data, res, 4);
     return *this;
 }
 
 __device__ Field &Field::operator=(const Field &other)
 {
-    copy_limbs(data, other.data, LIMBS);
+    copy_limbs(data, other.data, 4);
     return *this;
 }
 __device__ Field Field::operator+(const Field &other)
 {
-    Field result;
-    add_limbs(result.data, this->data, other.data, LIMBS);
-    conditional_subtract(result.data, pallas::MODULUS, LIMBS);
+    Field result(*this);
+    result+=other;
     return result;
 }
 __device__ Field Field::operator+(const Field &other) const
 {
-    Field result;
-    add_limbs(result.data, this->data, other.data, LIMBS);
-    conditional_subtract(result.data, pallas::MODULUS, LIMBS);
+    Field result(*this);
+    result += other;
     return result;
 }
 __device__ Field Field::operator-(const Field &other)
@@ -189,7 +178,7 @@ __device__ Field Field::operator-()
         return *this;
 
     Field result;
-    sub_limbs(result.data, pallas::MODULUS, this->data, LIMBS);
+    sub_limbs(result.data, pallas::MODULUS, this->data, 4);
     return result;
 }
 __device__ Field Field::operator-() const
@@ -198,7 +187,7 @@ __device__ Field Field::operator-() const
         return *this;
 
     Field result;
-    sub_limbs(result.data, pallas::MODULUS, this->data, LIMBS);
+    sub_limbs(result.data, pallas::MODULUS, this->data, 4);
     return result;
 }
 
@@ -206,11 +195,11 @@ __device__ Field Field::operator-() const
 __device__ Field Field::dbl()
 {
     Field result;
-    for (size_t i = LIMBS - 1; i >= 1; i--)
+    for (size_t i = 3; i >= 1; i--)
         result.data[i] = (this->data[i] << 1) | (this->data[i - 1] >> (64 - 1));
 
     result.data[0] = this->data[0] << 1;
-    conditional_subtract(result.data, pallas::MODULUS, LIMBS);
+    conditional_subtract(result.data, pallas::MODULUS, 4);
     return result;
 }
 // square of the field element
@@ -225,28 +214,28 @@ __device__ Field Field::squared() const
 // clear the set Field values
 __device__ void Field::clear()
 {
-    for (int i = 0; i < LIMBS; i++)
+    for (int i = 0; i < 4; i++)
         data[i] = 0;
 }
 // Check if equal to zero
 __device__ bool Field::is_zero()
 {
-    return is_zero_limbs(data, LIMBS);
+    return is_zero_limbs(data, 4);
 }
 __device__ bool Field::is_zero() const
 {
-    return is_zero_limbs(data, LIMBS);
+    return is_zero_limbs(data, 4);
 }
 
 // go to montgomery representation
 __device__ inline void Field::encode_montgomery()
 {
-    mont_encode(this->data, this->data, pallas::R2, pallas::MODULUS, pallas::INV, LIMBS);
+    mont_encode(this->data, this->data, pallas::R2, pallas::MODULUS, pallas::INV, 4);
 }
 // get out of montgomery representation
 __device__ inline void Field::decode_montgomery()
 {
-    mont_decode(this->data, this->data, pallas::MODULUS, pallas::INV, LIMBS);
+    mont_decode(this->data, this->data, pallas::MODULUS, pallas::INV, 4);
 }
 // find the inverse of the field element
 __device__ Field Field::inverse()
@@ -255,15 +244,13 @@ __device__ Field Field::inverse()
 
     Field result = one(); // Initialize result to 1
 
-    // Exponent: p - 2
-    // BLS12-381 modulus - 2
-    __uint64_t exponent[LIMBS];
-    copy_limbs(exponent, pallas::MODULUS, LIMBS);
+    __uint64_t exponent[4];
+    copy_limbs(exponent, pallas::MODULUS, 4);
     exponent[0] -= 2;
 
     // Perform exponentiation using square-and-multiply
     #pragma unroll 1
-    for (int i = 5; i >= 0; --i) {
+    for (int i = 3; i >= 0; --i) {
         #pragma unroll 1
         for (int bit = 63; bit >= 0; --bit) {
             result = result.squared();
@@ -279,7 +266,7 @@ __device__ Field Field::inverse()
 __device__ Field Field::one()
 {
     Field result;
-    copy_limbs(result.data, pallas::R, LIMBS);
+    copy_limbs(result.data, pallas::R, 4);
     return result;
 }
 
@@ -287,13 +274,12 @@ __device__ Field Field::one()
 __device__ Field Field::zero()
 {
     Field x;
-    assert(x.is_zero() == true);
     return x;
 }
 
-__host__ __device__ void Field::print()
+__device__ void Field::print()
 {
-    for (int i = LIMBS - 1; i >= 0; i--)
+    for (int i = 4 - 1; i >= 0; i--)
         printf("%016lx ", data[i]);
     printf("\n");
 }

@@ -5,7 +5,7 @@
 class alignas(16) Point
 {
 public:
-    Field X, Y, Z;
+    __device__ Field X, Y, Z;
     // constructor without any argument, set point to infinity
     __device__ Point();
     // initialize the points with x,y,z field values

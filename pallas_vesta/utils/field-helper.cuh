@@ -29,7 +29,7 @@ __host__ __device__ __forceinline__ bool equal(const uint64_t *a, const uint64_t
     return true;
 }
 
-__host__ __device__ __forceinline__ void copy_limbs(uint64_t *dest, const uint64_t *src, int n)
+__host__ __device__ inline void copy_limbs(uint64_t *dest, const uint64_t *src, int n)
 {
 // #pragma unroll
     for (int i = 0; i < n; ++i)
@@ -49,7 +49,7 @@ __host__ __device__ __forceinline__ void add_limbs(uint64_t *res, const uint64_t
     }
 }
 
-__host__ __device__ __forceinline__ bool sub_limbs(uint64_t *res, const uint64_t *a, const uint64_t *b, int n)
+__host__ __device__ inline bool sub_limbs(uint64_t *res, const uint64_t *a, const uint64_t *b, int n)
 {
     uint64_t borrow = 0;
     for (int i = 0; i < n; ++i)

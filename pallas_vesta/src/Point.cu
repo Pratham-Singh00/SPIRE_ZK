@@ -6,24 +6,16 @@
 
 __device__ Point::Point()
 {
-    printf("Inside constructor of Point\n");
     this->X = this->X.zero();
-    printf("Debug point 1\n");
     this->Y = this->Y.one();
-    printf("Debug point 2\n");
     this->Z = this->Z.zero();
-    printf("Debug point 3\n");
 }
 // initialize the points with x,y,z field values
 __device__ Point::Point(const Field &x, const Field &y, const Field &z)
 {
-    printf("inside point constructor with params\n");
     this->X = x;
-    printf("Debug p 1\n");
     this->Y = y;
-    printf("Debug p 2\n");
     this->Z = z;
-    printf("Debug p 3\n");
 }
 __device__ Point::Point(const Point &other)
 {
@@ -31,9 +23,8 @@ __device__ Point::Point(const Point &other)
     this->Y = other.Y;
     this->Z = other.Z;
 }
-__device__ Point& Point::operator=(const Point &other)
+__device__ Point &Point::operator=(const Point &other)
 {
-    printf("Came here?\n");
     this->X = other.X;
     this->Y = other.Y;
     this->Z = other.Z;
@@ -47,6 +38,23 @@ __device__ Point Point::operator+(const Point &other)
     Point copy_other(other);
     if (copy_other.is_zero())
         return *this;
+
+    /* https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-add-2007-bl
+      Z1Z1 = Z1^2
+      Z2Z2 = Z2^2
+      U1 = X1*Z2Z2
+      U2 = X2*Z1Z1
+      S1 = Y1*Z2*Z2Z2
+      S2 = Y2*Z1*Z1Z1
+      H = U2-U1
+      I = (2*H)^2
+      J = H*I
+      r = 2*(S2-S1)
+      V = U1*I
+      X3 = r^2-J-2*V
+      Y3 = r*(V-X3)-2*S1*J
+      Z3 = ((Z1+Z2)2-Z1Z1-Z2Z2)*H
+    */
 
     Field Z1Z1 = this->Z.squared();
     Field Z2Z2 = copy_other.Z.squared();
@@ -138,9 +146,10 @@ __device__ Point Point::operator*(Scalar sc)
 
 __device__ Point Point::operator*(const unsigned long scalar32)
 {
-    return *this * scalar32;
+    Scalar scalar(scalar32);
+    Point p(*this);
+    return p * scalar;
 }
-
 
 __device__ Point Point::operator*(const unsigned long scalar32) const
 {
@@ -164,18 +173,13 @@ __device__ Point Point::zero()
 __device__ Point Point::one()
 {
     Field x, y, z;
-    Point res;
     x.data[0] = 1;
     y.data[0] = 2;
     z.data[0] = 1;
     x.encode_montgomery();
     y.encode_montgomery();
     z.encode_montgomery();
-    res.X = -x;
-    res.Y = y;
-    res.Z = z;
-    printf("Came here inside one?\n");
-    return res;
+    return Point(-x, y, z);
 }
 // Get a random point
 __device__ Point Point::random()
@@ -190,18 +194,28 @@ __device__ Point Point::dbl()
 {
     if (this->is_zero())
         return *this;
-    Field A = this->X.squared(); // A = X1^2
-    Field B = this->Y.squared(); // B = Y1^2
-    Field C = B.squared();       // C = B^2
 
+    /* https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
+      A = X1^2
+      B = Y1^2
+      C = B^2
+      D = 2*((X1+B)^2-A-C)
+      E = 3*A
+      F = E^2
+      X3 = F-2*D
+      Y3 = E*(D-X3)-8*C
+      Z3 = 2*Y1*Z1
+    */
+    Field A = this->X.squared();                       // A = X1^2
+    Field B = this->Y.squared();                       // B = Y1^2
+    Field C = B.squared();                             // C = B^2
     Field D = ((this->X + B).squared() - A - C).dbl(); // D = 2 * ((X1 + B)^2 - A - C)
+    Field E = (A.dbl() + A);                           // E = 3 * A
+    Field F = E.squared();                             // F = E^2
+    Field X3 = F - D.dbl();                            // X3 = F - 2 D
+    Field Y3 = E * (D - X3) - C.dbl().dbl().dbl();     // Y3 = E * (D - X3) - 8 * C
 
-    Field E = A + A.dbl(); // E = 3 * A
-    Field F = E.squared(); // F = E^2
-
-    Field X3 = F - D.dbl();                        // X3 = F - 2 D
-    Field Y3 = E * (D - X3) - C.dbl().dbl().dbl(); // Y3 = E * (D - X3) - 8 * C
-    Field Z3 = (this->Y * this->Z).dbl();          // Z3 = 2 * Y1 * Z1
+    Field Z3 = (this->Y * this->Z).dbl(); // Z3 = 2 * Y1 * Z1
 
     return Point(X3, Y3, Z3);
 }
