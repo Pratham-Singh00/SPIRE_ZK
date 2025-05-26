@@ -7,85 +7,114 @@
 
 #include "./../include/Point.cuh"
 
-#define C 13
-#define NUM_BUCKETS (((size_t)1<<C) -1)
-#define SCALAR_BITS 256
-#define SEGMENTS ((SCALAR_BITS + C -1) / C)
+#define debug 1
 
-__global__ void msm_kernel(
-    const Scalar* scalars,
-    const Point* bases,
-    Point* buckets,
-    int n,
-    int segment
-) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= n) return;
+#define WINDOW_SIZE 16
+#define NUM_BITS 256
+#define CUDA_CHECK(call)                                                         \
+    do                                                                           \
+    {                                                                            \
+        cudaError_t err = call;                                                  \
+        if (err != cudaSuccess)                                                  \
+        {                                                                        \
+            std::cerr << "CUDA error at " << __FILE__ << ":" << __LINE__ << ": " \
+                      << cudaGetErrorString(err) << std::endl;                   \
+            exit(EXIT_FAILURE);                                                  \
+        }                                                                        \
+    } while (0)
 
-    uint32_t digit = scalars[idx].get_bits_as_uint32((segment+1)*C - 1, segment*C);// get_window(&scalars[idx], segment);
-    if (digit == 0) return;
-
-    int bucket_id = digit - 1;
-    buckets[bucket_id] = buckets[bucket_id] + bases[idx];
-}
-
-
-__global__ void process_scalar_kernel(const Scalar *scalars, int n)
+struct bucket
 {
+    size_t count = 0;
+    Point **points;
+    __host__ void init(size_t num_point)
+    {
+        CUDA_CHECK(cudaMalloc(&points, sizeof(Point *) * num_point));
+    }
+    __device__ void insert(Point *address)
+    {
+        points[atomicAdd((unsigned long long *)&count, 1)] = address;
+    }
+};
 
-}
-
-void cuda_msm(Scalar *scalars, Point *points, int n, Point *result)
+__global__ void process_scalars(Scalar *sc, Point *points, size_t num_points, bucket *bucket, int current_window)
 {
-    Scalar* d_scalars;
-    Point* d_bases;
-    Point* d_buckets;
-    size_t *d_bucket_length;
-    size_t *d_base_ptr;
-    
-
-    cudaMalloc(&d_scalars, sizeof(Scalar) * n);
-    cudaMalloc(&d_bases, sizeof(Point) * n);
-    cudaMalloc(&d_buckets, sizeof(Point) * NUM_BUCKETS);
-
-    cudaMalloc(&d_bucket_length, sizeof(size_t)* NUM_BUCKETS);
-
-    cudaMemcpy(d_scalars, scalars, sizeof(Scalar) * n, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_bases, points, sizeof(Point) * n, cudaMemcpyHostToDevice);
-    cudaMemset(d_buckets, 0, sizeof(Point) * NUM_BUCKETS);
-    cudaMemset(d_bucket_length, 0, sizeof(size_t) * NUM_BUCKETS);
-
-
-    int threads = 256;
-    int blocks = (n + threads - 1) / threads;
-
-    // Point acc;
-
-    // for (int seg = SEGMENTS - 1; seg >= 0; --seg) {
-    //     for (int i = 0; i < C; i++) {
-    //         acc = acc.dbl();
-    //     }
-
-    //     cudaMemset(d_buckets, 0, sizeof(Point) * NUM_BUCKETS);
-    //     msm_kernel<<<blocks, threads>>>(d_scalars, d_bases, d_buckets, n, seg);
-    //     cudaDeviceSynchronize();
-
-    //     Point buckets[NUM_BUCKETS];
-    //     cudaMemcpy(buckets, d_buckets, sizeof(Point) * NUM_BUCKETS, cudaMemcpyDeviceToHost);
-
-    //     Point running_sum;
-    //     for (int i = NUM_BUCKETS - 1; i >= 0; --i) {
-    //         running_sum = running_sum + buckets[i];
-    //         acc = acc + running_sum;
-    //     }
-    // }
-
-    // *result = acc;
-
-    cudaFree(d_scalars);
-    cudaFree(d_bases);
-    cudaFree(d_buckets);
+    size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
+    size_t stride = blockDim.x * gridDim.x;
+    while (idx < num_points)
+    {
+        size_t bindex = 0;
+        size_t start = current_window * WINDOW_SIZE; 
+        size_t end = start + WINDOW_SIZE;
+        for(size_t i = start, j = 0; i < end; i++, j++)
+        {
+            if(sc[idx].test_bit(i))
+            {
+                bindex |= (1<<j);
+            }
+        }
+        // size_t b_num = sc[idx].get_bits_as_uint32((current_window + 1) * WINDOW_SIZE, current_window * WINDOW_SIZE);
+        bucket[bindex].insert(&points[idx]);
+        idx += stride;
+    }
 }
 
+void construct_buckets(size_t num_points, bucket *buckets)
+{
+    for (size_t i = 0; i < (size_t)1 << WINDOW_SIZE; i++)
+        buckets[i].init(num_points);
+}
+
+__global__ void sum_buckets()
+{
+}
+
+__global__ void accumulate_result()
+{
+}
+#if debug
+__global__ void print_bucket(bucket *buckets)
+{
+    for (size_t i = 0; i < ((size_t)1 << WINDOW_SIZE); i++)
+        if (buckets[i].count)
+            printf("Bucket: %lu, Count: %lu\n", i, buckets[i].count);
+}
+
+#endif
+void cuda_pippenger_msm(Point *points, Scalar *scalars, size_t num_points)
+{
+    int num_windows = (NUM_BITS + WINDOW_SIZE - 1) / WINDOW_SIZE;
+    bucket *buckets, *d_bucket;
+    buckets = new bucket[(size_t)1 << WINDOW_SIZE];
+    CUDA_CHECK(cudaMalloc(&d_bucket, sizeof(bucket) * ((size_t)1 << WINDOW_SIZE)));
+    CUDA_CHECK(cudaDeviceSynchronize());
+    construct_buckets(num_points, buckets);
+
+    CUDA_CHECK(cudaMemcpy(d_bucket, buckets, sizeof(bucket) * ((size_t)1 << WINDOW_SIZE), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    for (int i = 0; i < num_windows ; i++)
+    {
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+        process_scalars<<<512, 32>>>(scalars, points, num_points, d_bucket, i);
+        CUDA_CHECK(cudaDeviceSynchronize());
+        cudaEventRecord(stop);
+
+        float ms;
+        cudaEventElapsedTime(&ms, start, stop);
+        printf("Time taken: %f\n", ms);
+
+#if debug
+        print_bucket<<<1, 1>>>(d_bucket);
+        CUDA_CHECK(cudaDeviceSynchronize());
+#endif
+        // reset bucket
+        CUDA_CHECK(cudaMemcpy(d_bucket, buckets, sizeof(bucket) * ((size_t)1 << WINDOW_SIZE), cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaDeviceSynchronize());
+    }
+}
 
 #endif
