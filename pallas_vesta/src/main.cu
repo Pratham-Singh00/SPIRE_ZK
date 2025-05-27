@@ -9,6 +9,10 @@
 
 #include "./msm.cu"
 
+#include "./../constants/msm_sage_values_2.cuh"
+
+#define debug 1
+
 #define CUDA_CHECK(call) \
     do { \
         cudaError_t err = call; \
@@ -81,26 +85,53 @@ __global__ void test_one()
     s.print();
 
 }
-__global__ void init_points_scalars(Scalar *scalar, Point *point, size_t num)
+__global__ void init_points_scalars(Scalar *scalar, Point *point, size_t num, uint64_t *sage_scalars, uint64_t *sage_points)
 {
     size_t idx = blockDim.x * blockIdx.x + threadIdx.x;
     size_t stride = blockDim.x * gridDim.x;
     while(idx < num)
     {
-        scalar[idx] = scalar[idx].random();
-        point[idx] = point[idx].random() * idx;
+        scalar[idx] = Scalar(&sage_scalars[idx*4], 4);
+        point[idx].X = Field(&sage_points[2*4*idx]);
+        point[idx].Y = Field(&sage_points[2*4*idx + 4]);
+        point[idx].Z = point[idx].Z.zero();
+        point[idx].to_affine();
         idx += stride;
     }
 }
-__global__ void Scalar_test()
+
+#if debug
+
+__global__ void check_construction(Point *point, Scalar *scalar)
 {
-    Scalar sc;
-    sc = sc.random();
-    sc.print();
-    for(int i = 0; i<16; i++)
+    for(int i=0; i< 10; i++)
     {
-        printf("%d: %08x\n", i, sc.get_bits_as_uint32((i+1)*16, i*16));
+        point[i].print();
+        scalar[i].print();
     }
+}
+
+#endif
+
+__global__ void init_points_from_sage(Point *p, size_t num)
+{
+    size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
+    size_t stride = blockDim.x * gridDim.x;
+    while(idx < num) {
+        p[idx].X.encode_montgomery();
+        p[idx].Y.encode_montgomery();
+        p[idx].Z.encode_montgomery();
+
+        idx += stride;
+    }
+}
+
+__global__ void init_sage_result(Point *p, const uint64_t *x, const uint64_t *y)
+{
+    p->X = Field(x);
+    p->Y = Field(y);
+    p->Z = p->Z.one();
+    p->print();
 }
 
 int main(int argc, char* argv[])
@@ -120,15 +151,30 @@ int main(int argc, char* argv[])
     CUDA_CHECK(cudaMalloc(&points, sizeof(Point)*num_v));
     CUDA_CHECK(cudaMalloc(&scalars, sizeof(Scalar)*num_v));
 
-    init_points_scalars<<<512, 128>>>(scalars, points, num_v);
+    CUDA_CHECK(cudaMemcpy(points, sage_points, sizeof(uint64_t)*num_v*4*3, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(scalars, sage_scalars, sizeof(uint64_t)*num_v*4, cudaMemcpyHostToDevice));
+
+    init_points_from_sage<<<512,128>>>(points, num_v);
     CUDA_CHECK(cudaDeviceSynchronize());
 
-    Scalar_test<<<1,1>>>();
-    CUDA_CHECK(cudaDeviceSynchronize());
+    // check_construction<<<1,1>>>(points, scalars);
 
     cuda_pippenger_msm(points, scalars, num_v);
+    CUDA_CHECK(cudaDeviceSynchronize());
 
-
+    Point *sage_res;
+    CUDA_CHECK(cudaMalloc(&sage_res, sizeof(Point)));
+    // init_sage_result<<<1,1>>>(sage_res, sage_msm_result[0], sage_msm_result[1]);
+    // CUDA_CHECK(cudaDeviceSynchronize());
+    printf("Sage Result:\n");
+    for(int i=0; i< 2; i++)
+    {
+        if(!i) printf("X = \n");
+        else printf("Y = \n");
+        for(int j=3; j>=0 ; j--)
+            printf("%016lx ", sage_msm_result[i][j]);
+        printf("\n");
+    }
     cudaError_t t = cudaGetLastError();
     if(t != cudaSuccess)
     {

@@ -7,6 +7,7 @@ public:
     __device__ Scalar();
     __device__ Scalar(const unsigned long long x);
     __device__ Scalar(const __uint8_t *bytes, size_t length = 32);
+    __device__ Scalar(const uint64_t *bytes, size_t len=4);
     __device__ Scalar(const Scalar &other);
 
     // assignment from another scalar

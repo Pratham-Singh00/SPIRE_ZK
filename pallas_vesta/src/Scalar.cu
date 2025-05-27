@@ -34,6 +34,11 @@ __device__ Scalar::Scalar(const __uint8_t *bytes, size_t length)
         }
     }
 }
+__device__ Scalar::Scalar(const uint64_t *bytes, size_t len)
+{
+    copy_limbs(data, bytes, 4);
+}
+
 __device__ Scalar::Scalar(const Scalar &other)
 {
     for (int i = 0; i < LIMBS; i++)
