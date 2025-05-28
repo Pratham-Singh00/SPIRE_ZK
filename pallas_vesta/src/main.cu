@@ -7,9 +7,11 @@
 #include "./../include/Field.cuh"
 #include "./../include/Point.cuh"
 
-#include "./msm.cu"
+// #include "./msm.cu"
+#include "./msm_optimization_1.cu"
 
-#include "./../constants/msm_sage_values_2.cuh"
+// #include "./../constants/msm_sage_values_2.cuh"
+#include "./../tests/test_files/msm_20.cuh"
 
 #define debug 1
 
@@ -162,10 +164,10 @@ int main(int argc, char* argv[])
     cuda_pippenger_msm(points, scalars, num_v);
     CUDA_CHECK(cudaDeviceSynchronize());
 
-    Point *sage_res;
-    CUDA_CHECK(cudaMalloc(&sage_res, sizeof(Point)));
-    // init_sage_result<<<1,1>>>(sage_res, sage_msm_result[0], sage_msm_result[1]);
-    // CUDA_CHECK(cudaDeviceSynchronize());
+    // Point *sage_res;
+    // CUDA_CHECK(cudaMalloc(&sage_res, sizeof(Point)));
+    // // init_sage_result<<<1,1>>>(sage_res, sage_msm_result[0], sage_msm_result[1]);
+    // // CUDA_CHECK(cudaDeviceSynchronize());
     printf("Sage Result:\n");
     for(int i=0; i< 2; i++)
     {
