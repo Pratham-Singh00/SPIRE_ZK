@@ -23,7 +23,6 @@
         }                                                                        \
     } while (0)
 
-
 // struct to represent a bucket. Each bucket contains count and point indices associated with the bucket
 struct bucket
 {
@@ -70,7 +69,7 @@ __global__ void process_scalars(Scalar *sc, Point *points, size_t num_points, bu
     }
 }
 
-// Sum the bucket points. Needs balancing here to improve performance. 
+// Sum the bucket points. Needs balancing here to improve performance.
 __global__ void sum_buckets(Point *point, bucket *bucket, Point *sum, size_t num_bucket)
 {
     size_t idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -92,11 +91,16 @@ __global__ void sum_buckets(Point *point, bucket *bucket, Point *sum, size_t num
 // sum all the buckets of a window and store the result to a point
 __global__ void gather_buckets(Point *sum, size_t bcount, Point *res)
 {
-    Point lsum;
+    Point lsum, running_sum;
     lsum = lsum.zero();
-    for (size_t i = 0; i < bcount; i++)
+    running_sum = running_sum.zero();
+    for (size_t i = bcount - 1; i > 0; i--)
+    {
         lsum = lsum + sum[i];
+        // running_sum = running_sum + lsum;
+    }
     *res = lsum;
+    // *res = running_sum;
 }
 
 // accumulate all window output
@@ -165,29 +169,46 @@ void cuda_pippenger_msm(Point *points, Scalar *scalars, size_t num_points)
     Point *result;
     CUDA_CHECK(cudaMalloc(&result, sizeof(Point)));
     cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start);
-    cudaEventSynchronize(start);
+
     for (int i = 0; i < num_windows; i++)
     {
+        
         process_scalars<<<512, 32>>>(scalars, points, num_points, d_bucket, i);
         CUDA_CHECK(cudaDeviceSynchronize());
-// #if debug
-//         printf("Bucket status %d\n", i);
-//         print_bucket<<<1, 1>>>(d_bucket);
-// #endif
+        
+        // #if debug
+        //         printf("Bucket status %d\n", i);
+        //         print_bucket<<<1, 1>>>(d_bucket);
+        // #endif
         size_t blockSize = 256;
         size_t gridSize = (num_bucket + blockSize - 1) / blockSize;
+
+        
+
         sum_buckets<<<gridSize, blockSize>>>(points, d_bucket, bucket_sums, num_bucket);
         CUDA_CHECK(cudaDeviceSynchronize());
-// #if debug
-//         printf("Bucket sums after sum_bucket\n");
-//         print_point<<<1, 1>>>(bucket_sums, num_bucket);
-//         CUDA_CHECK(cudaDeviceSynchronize());
-// #endif
+        // #if debug
+        //         printf("Bucket sums after sum_bucket\n");
+        //         print_point<<<1, 1>>>(bucket_sums, num_bucket);
+        //         CUDA_CHECK(cudaDeviceSynchronize());
+        // #endif
+
+
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+        cudaEventSynchronize(start);
         gather_buckets<<<1, 1>>>(bucket_sums, num_bucket, &window_sum[i]);
         CUDA_CHECK(cudaDeviceSynchronize());
+
+
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+
+        float ms;
+        cudaEventElapsedTime(&ms, start, stop);
+        printf("Time taken: %f\n", ms);
+
         // #if debug
         //         printf("Window %d sum:\n", i);
         //         print_point<<<1, 1>>>(&window_sum[i]);
@@ -200,15 +221,11 @@ void cuda_pippenger_msm(Point *points, Scalar *scalars, size_t num_points)
         // reset bucket
         CUDA_CHECK(cudaMemcpy(d_bucket, buckets, sizeof(bucket) * num_bucket, cudaMemcpyHostToDevice));
         CUDA_CHECK(cudaDeviceSynchronize());
+        
     }
     accumulate_result<<<1, 1>>>(window_sum, num_windows, result);
     CUDA_CHECK(cudaDeviceSynchronize());
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
 
-    float ms;
-    cudaEventElapsedTime(&ms, start, stop);
-    printf("Time taken: %f\n", ms);
 #if debug
     print_point<<<1, 1>>>(result);
     CUDA_CHECK(cudaDeviceSynchronize());
