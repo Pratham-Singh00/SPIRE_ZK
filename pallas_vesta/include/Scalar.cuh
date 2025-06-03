@@ -1,6 +1,6 @@
 #ifndef __SCALAR_CUH
 #define __SCALAR_CUH
-class alignas(16) Scalar
+class __align__(16) Scalar
 {
 public:
     __uint64_t data[4]; // scalars are 255 bits = 32 bytes

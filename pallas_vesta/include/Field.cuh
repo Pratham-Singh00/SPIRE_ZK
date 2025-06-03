@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 #include "Scalar.cuh"
 
-class alignas(16) Field
+class __align__(16) Field
 {
 public:
     __device__ u_int64_t data[4];

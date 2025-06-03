@@ -2,7 +2,7 @@
 #define __POINT_CUH
 
 #include "Field.cuh"
-class alignas(16) Point
+class __align__(16) Point
 {
 public:
     __device__ Field X, Y, Z;
