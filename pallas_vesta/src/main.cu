@@ -8,12 +8,12 @@
 #include "./../include/Point.cuh"
 
 // #include "./msm.cu"
-#include "./msm_optimization_1.cu"
+#include "./msm_optimization_3.cu"
 
 // #include "./../constants/msm_sage_values_2.cuh"
-// #include "./../constants/pasta_22.cuh"
-#include "./../constants/pasta_17.cuh"
-// #include "./../tests/test_files/msm_17.cuh"
+#include "./../constants/pasta_22.cuh"
+// #include "./../constants/pasta_17.cuh"
+// #include "./../tests/test_files/msm_18.cuh"
 
 #define debug 1
 
@@ -151,7 +151,6 @@ __global__ void print_point(uint64_t *x, uint64_t *y, uint64_t *z)
     p.to_affine();
     p.print();
 }
-
 int main(int argc, char *argv[])
 {
 
@@ -170,7 +169,16 @@ int main(int argc, char *argv[])
     CUDA_CHECK(cudaMalloc(&points, sizeof(Point) * num_v));
     CUDA_CHECK(cudaMalloc(&scalars, sizeof(Scalar) * num_v));
 
-    CUDA_CHECK(cudaMemcpy(points, sage_points, sizeof(uint64_t) * num_v * 4 * 3, cudaMemcpyHostToDevice));
+    // CUDA_CHECK(cudaMemcpy(points, sage_points, sizeof(uint64_t) * num_v * 4 * 3, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy2D(
+        points,              // dst
+        sizeof(Point), // dst pitch (128 bytes)
+        sage_points,                // src
+        96,                   // src pitch (96 bytes)
+        96,                   // width (bytes to copy per item)
+        num_v,                    // height (items)
+        cudaMemcpyHostToDevice
+    ));
     CUDA_CHECK(cudaMemcpy(scalars, sage_scalars, sizeof(uint64_t) * num_v * 4, cudaMemcpyHostToDevice));
 
     init_points_from_sage<<<512, 128>>>(points, num_v);

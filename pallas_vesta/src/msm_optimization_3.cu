@@ -8,6 +8,7 @@
 #include <cub/cub.cuh>
 
 #include "./../include/Point.cuh"
+#include <vector>
 
 #define debug 1
 
@@ -78,207 +79,90 @@ __global__ void construct_bucket_indices(
         idx += stride;
     }
 }
-__global__ void single_bucket_sum(Point *point, Point *sum, uint32_t *indices, size_t offset, size_t count)
-{
-    int total_thread = blockDim.x;
-    int idx = threadIdx.x;
-    int per_thread = (count + total_thread - 1) / total_thread;
-    int start = offset + idx * per_thread;
-    int end = start + per_thread;
-    if (end > offset + count)
-    {
-        end = offset + count;
-    }
-    extern __shared__ Point shared_sum[];
-    shared_sum[idx] = shared_sum[idx].zero();
-    for (int i = start; i < end; i++)
-    {
-        printf("Processing index %d in single bucket sum\n", indices[i]);
-        shared_sum[idx] = shared_sum[idx].mixed_add(point[indices[i]]);
-    }
-    __syncthreads();
-    // Now we need to reduce the shared_sum array
-    if (idx % 2 == 0)
-    {
-        shared_sum[idx] = shared_sum[idx] + shared_sum[idx + 1];
-    }
-    __syncthreads();
-    if (idx % 4 == 0)
-    {
-        shared_sum[idx] = shared_sum[idx] + shared_sum[idx + 2];
-    }
-    __syncthreads();
-    if (idx % 8 == 0)
-    {
-        shared_sum[idx] = shared_sum[idx] + shared_sum[idx + 4];
-    }
-    __syncthreads();
-    if (idx % 16 == 0)
-    {
-        shared_sum[idx] = shared_sum[idx] + shared_sum[idx + 8];
-    }
-    __syncthreads();
-    if (idx == 0)
-    {
-        Point lsum;
-        lsum = lsum.zero();
-        for (int i = 0; i < total_thread; i += 16)
-        {
-            // shared_sum[0] = shared_sum[0] + shared_sum[i];
-            lsum = lsum.add(shared_sum[i]);
-        }
-        *sum = lsum;
-    }
-}
-__global__ void sum_single_bucket(Point *point, Point *sum, uint32_t offset, uint32_t *indices, uint32_t count, size_t num_bucket, size_t curr_bucket)
-{
-    size_t total_thread = blockDim.x;
-    size_t idx = threadIdx.x;
-    if (idx == 0)
-        printf("Processing bucket %lu with offset %u and count %u\n", curr_bucket, offset, count);
-    size_t per_thread = (count + total_thread - 1) / total_thread;
-    // printf("count: %u, total_thread: %lu, per_thread: %lu, offset: %u, curr_bucket: %lu\n", count, total_thread, per_thread, offset, curr_bucket);
-    size_t start = offset + idx * per_thread;
-    size_t end = start + per_thread;
-    if (end > offset + count)
-    {
-        end = offset + count;
-    }
-    // printf("start: %lu, end: %lu, idx: %lu\n", start, end, idx);
-    extern __shared__ Point shared_sum[];
-    shared_sum[idx] = shared_sum[idx].zero();
 
-    for (size_t i = start; i < end; i++)
-    {
-        shared_sum[idx] = shared_sum[idx].mixed_add(point[indices[i]]);
-    }
-
-    __syncthreads();
-    // Now we need to reduce the shared_sum array
-    if (idx % 2 == 0)
-    {
-        shared_sum[idx] = shared_sum[idx] + shared_sum[idx + 1];
-    }
-    __syncthreads();
-    if (idx % 4 == 0)
-    {
-        shared_sum[idx] = shared_sum[idx] + shared_sum[idx + 2];
-    }
-    __syncthreads();
-    if (idx % 8 == 0)
-    {
-        shared_sum[idx] = shared_sum[idx] + shared_sum[idx + 4];
-    }
-    __syncthreads();
-    if (idx % 16 == 0)
-    {
-        shared_sum[idx] = shared_sum[idx] + shared_sum[idx + 8];
-    }
-    __syncthreads();
-    if (idx == 0)
-    {
-        Point lsum;
-        lsum = lsum.zero();
-        for (int i = 0; i < blockDim.x; i += 16)
-        {
-            // shared_sum[0] = shared_sum[0] + shared_sum[i];
-            lsum = lsum.add(shared_sum[i]);
-        }
-        *sum = lsum;
-    }
-}
-__global__ void sum_single_bucket_parallel(Point *point, Point *sum, uint32_t *offset, uint32_t *indices, uint32_t *count, size_t num_bucket, size_t curr_bucket)
+__global__ void sum_small_bucket(const Point *point, Point *sum, const uint32_t *offset, const uint32_t *indices,
+                                 const uint32_t *count, size_t num_bucket)
 {
-    size_t total_threads = blockDim.x * gridDim.x;
-    size_t idx = threadIdx.x + blockIdx.x * blockDim.x;
-    size_t curr_count = count[curr_bucket];
-    size_t to_sum = (curr_count + total_threads - 1) / total_threads;
-    size_t start = offset[curr_bucket] + idx * to_sum;
-    size_t end = start + to_sum;
-    if (end > offset[curr_bucket] + curr_count)
-    {
-        end = offset[curr_bucket] + curr_count;
-    }
-    extern __shared__ Point shared_sum[];
-    shared_sum[threadIdx.x] = shared_sum[threadIdx.x].zero();
-    for (size_t i = start; i < end; i++)
-    {
-        shared_sum[threadIdx.x] = shared_sum[threadIdx.x].mixed_add(point[indices[i]]);
-    }
-    __syncthreads();
-    // Now we need to reduce the shared_sum array
-    if (threadIdx.x == 0)
-    {
-        Point lsum = shared_sum[0];
-        for (size_t i = 1; i < blockDim.x; i++)
-        {
-            lsum = lsum.add(shared_sum[i]);
-        }
-        // lsum = lsum * curr_bucket;
-        sum[curr_bucket] = lsum;
-    }
-}
-// Sum the bucket points. Needs balancing here to improve performance.
-__global__ void sum_buckets(Point *point, Point *sum, uint32_t *offset, uint32_t *indices, uint32_t *count, size_t num_bucket)
-{
-    size_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+    size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
     size_t stride = blockDim.x * gridDim.x;
     size_t curr_window = blockIdx.y;
     while (idx < num_bucket)
     {
-        Point lsum;
-        lsum = lsum.zero();
-        // Skip the zero bucket
-        if (idx == 0)
+        if (count[idx + curr_window * num_bucket] > 0 && count[idx + curr_window * num_bucket] < 128)
         {
-            sum[idx + curr_window * num_bucket] = lsum;
-            idx += stride;
-            continue;
-        }
-        // If the bucket is empty, skip it
-        if (count[idx + curr_window * num_bucket] == 0)
-        {
-            sum[idx + curr_window * num_bucket] = lsum;
-            idx += stride;
-            continue;
-        }
-        // if the bucket has less than 8 elements, we can use a simple loop
-        else if (count[idx + curr_window * num_bucket] < 256)
-        {
+            Point lsum;
+            lsum = lsum.zero();
 
-            for (size_t i = offset[idx + curr_window * num_bucket]; i < offset[idx + curr_window * num_bucket] + count[idx + curr_window * num_bucket]; i++)
+            size_t start = offset[idx + curr_window * num_bucket];
+            size_t end = start + count[idx + curr_window * num_bucket];
+            for (size_t i = start; i < end; i++)
             {
-                lsum = lsum.mixed_add(point[indices[i]]);
+                Point point_value = point[indices[i]];
+                lsum = lsum.mixed_add(point_value);
             }
-            // lsum = lsum * idx;
-
             sum[idx + curr_window * num_bucket] = lsum;
-        }
-        // if the bucket has less than 64 elements, we can use a single grid with multiple thread to compute the sum
-        else if (count[idx + curr_window * num_bucket] < 256 * 32)
-        {
-            // dim3 block(128);
-            // single_bucket_sum<<<1, block, sizeof(Point)*block.x>>>(point, &sum[idx + curr_window * num_bucket], indices, offset[idx + curr_window * num_bucket], count[idx + curr_window * num_bucket]);
-            for (size_t i = offset[idx + curr_window * num_bucket]; i < offset[idx + curr_window * num_bucket] + count[idx + curr_window * num_bucket]; i++)
-            {
-                lsum = lsum.mixed_add(point[indices[i]]);
-            }
-            // lsum = lsum * idx;
-
-            sum[idx + curr_window * num_bucket] = lsum;
-        }
-        // if the bucket has more than 64 elements, we will use multiple grid with multiple thread to compute the sum
-        else
-        {
-            printf("Large bucket\n");
-
-            dim3 block(32);
-            sum_single_bucket_parallel<<<1, block, sizeof(Point) * block.x>>>(point, sum, offset, indices, count, num_bucket, idx + curr_window * num_bucket);
         }
 
         idx += stride;
     }
 }
+__global__ void sum_medium_bucket(const Point *point, Point *sum, const uint32_t *offset,
+                                  const uint32_t *indices, const uint32_t *count, size_t num_bucket)
+{
+    size_t bucket = blockIdx.x;
+    size_t curr_window = blockIdx.y;
+    size_t stride = gridDim.x;
+    size_t num_threads = blockDim.x;
+
+    __shared__ Point shared_sum[128];
+
+    while (bucket < num_bucket)
+    {
+        size_t curr_count = count[bucket + curr_window * num_bucket];
+        if (curr_count < 128 || curr_count > 256 * 128)
+        {
+            bucket += stride;
+            continue;
+        }
+        size_t per_thread = (curr_count + num_threads - 1) / num_threads;
+
+        size_t idx = threadIdx.x;
+
+        size_t start = offset[bucket + curr_window * num_bucket] + idx * per_thread;
+        size_t end = start + per_thread;
+        if (end > offset[bucket + curr_window * num_bucket] + curr_count)
+            end = offset[bucket + curr_window * num_bucket] + curr_count;
+        Point lsum;
+        lsum = lsum.zero();
+        for (size_t i = start; i < end; i++)
+        {
+            Point point_value = point[indices[i]];
+            lsum = lsum.mixed_add(point_value);
+        }
+        shared_sum[idx] = lsum;
+        __syncthreads();
+
+        for (int stride = blockDim.x / 2; stride > 0; stride >>= 1)
+        {
+            if (threadIdx.x < stride)
+                shared_sum[threadIdx.x] = shared_sum[threadIdx.x] + shared_sum[threadIdx.x + stride];
+            __syncthreads();
+        }
+        if (idx == 0)
+        {
+            sum[bucket + curr_window * num_bucket] = shared_sum[0];
+        }
+
+        bucket += stride;
+    }
+}
+
+
+__global__ void sum_bucket_coalesced()
+{
+    
+}
+
 // sum all the buckets of a window and store the result to a point
 __global__ void gather_buckets(Point *sum, size_t bcount, Point *res)
 {
@@ -397,6 +281,16 @@ void cuda_pippenger_msm(Point *points, Scalar *scalars, size_t num_points)
     uint32_t *count;                   // count for bucket
     uint32_t *h_count;
 
+    cudaStream_t memcpy_stream;
+
+
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0);
+
+    int sm_count = prop.multiProcessorCount;
+
+    CUDA_CHECK(cudaStreamCreateWithFlags(&memcpy_stream, cudaStreamNonBlocking));
+    
     CUDA_CHECK(cudaMalloc(&scalar_chunks, sizeof(uint32_t) * num_points * num_windows));
     CUDA_CHECK(cudaMalloc(&indices, sizeof(uint32_t) * num_points * num_windows));
     CUDA_CHECK(cudaMalloc(&offset, sizeof(uint32_t) * num_bucket * num_windows));
@@ -434,16 +328,44 @@ void cuda_pippenger_msm(Point *points, Scalar *scalars, size_t num_points)
         d_temp_storage, temp_storage_bytes, count, offset, num_bucket * num_windows);
     CUDA_CHECK(cudaFree(d_temp_storage));
 
+    // CUDA_CHECK(cudaMemcpyAsync(h_count, count, sizeof(uint32_t) * num_bucket * num_windows, cudaMemcpyDeviceToHost, memcpy_stream));
+    
     // Build indices for each bucket
     CUDA_CHECK(cudaMemcpy(offset_counter, offset, sizeof(uint32_t) * num_bucket * num_windows, cudaMemcpyDeviceToDevice));
     CUDA_CHECK(cudaDeviceSynchronize());
     dim3 grid_size(gridSize, num_windows);
     construct_bucket_indices<<<grid_size, blockSize, 0, 0>>>(scalar_chunks, indices, offset_counter, num_points, num_bucket);
     CUDA_CHECK(cudaDeviceSynchronize());
-
-    CUDA_CHECK(cudaMemcpy(h_count, count, sizeof(uint32_t) * num_bucket * num_windows, cudaMemcpyDeviceToHost));
-
     
+
+    // std::vector<uint32_t> small_rows;
+    // uint32_t small_max_count = 0, medium_max_count = 0, large_max_count = 0;
+    // std::vector<uint32_t> medium_rows;
+    // std::vector<uint32_t> large_rows;
+    // for(int i=0; i< num_bucket*num_windows; i++)
+    // {
+    //     if (h_count[i] > 0 && h_count[i] < 128)
+    //     {
+    //         if(h_count[i] > small_max_count)
+    //             small_max_count = h_count[i];
+    //         small_rows.push_back(i);
+    //     }
+    //     else if (h_count[i] >= 128 && h_count[i] < 256 * 128)
+    //     {
+    //         if(h_count[i] > medium_max_count)
+    //             medium_max_count = h_count[i];
+    //         medium_rows.push_back(i);
+    //     }
+    //     else if (h_count[i] >= 256 * 128)
+    //     {
+    //         if(h_count[i] > large_max_count)
+    //             large_max_count = h_count[i];
+    //         large_rows.push_back(i);
+    //     }
+    // }
+    // printf("Number of small rows: %lu, max: %u\n", small_rows.size(), small_max_count);
+    // printf("Number of medium rows: %lu, max: %u\n", medium_rows.size(), medium_max_count);
+    // printf("Number of large rows: %lu, max: %u\n", large_rows.size(), large_max_count);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -455,9 +377,10 @@ void cuda_pippenger_msm(Point *points, Scalar *scalars, size_t num_points)
     // Sum the buckets
     Point *sum;
     CUDA_CHECK(cudaMalloc(&sum, sizeof(Point) * num_bucket * num_windows));
-    dim3 block(32);
-    dim3 grid(512, num_windows); //(num_bucket + blockSize - 1) / blockSize
-    sum_buckets<<<grid, block>>>(points, sum, offset, indices, count, num_bucket);
+    dim3 block(128);
+    dim3 grid(sm_count, num_windows); //(num_bucket + blockSize - 1) / blockSize
+    sum_small_bucket<<<grid, block>>>(points, sum, offset, indices, count, num_bucket);
+    sum_medium_bucket<<<grid, block>>>(points, sum, offset, indices, count, num_bucket);
     CUDA_CHECK(cudaDeviceSynchronize());
 
     cudaEvent_t sum_stop;

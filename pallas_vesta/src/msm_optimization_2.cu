@@ -79,11 +79,39 @@ __global__ void construct_bucket_indices(
     }
 }
 
-__global__ void sum_small_bucket(const Point *point, Point *sum, const uint32_t *offset, const uint32_t *indices, const uint32_t *count, size_t num_bucket)
+__global__ void sort_points_for_bucket(const Point *points,
+                                       Point *sorted_points,
+                                       const uint32_t *indices,
+                                       const uint32_t *offset,
+                                       const uint32_t *count,
+                                       size_t num_bucket,
+                                       size_t curr_window,
+                                       size_t num_points)
 {
     size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
     size_t stride = blockDim.x * gridDim.x;
-    size_t curr_window = blockIdx.y;
+    // size_t curr_window = blockIdx.y;
+    while (idx < num_bucket)
+    {
+        if (count[idx + curr_window * num_bucket] > 0)
+        {
+            size_t start = offset[idx + curr_window * num_bucket];
+            size_t end = start + count[idx + curr_window * num_bucket];
+            for (size_t i = start; i < end; i++)
+            {
+                sorted_points[i%num_points] = points[indices[i]];
+            }
+        }
+        idx += stride;
+    }
+}
+
+__global__ void sum_small_bucket(const Point *point, Point *sum, const uint32_t *offset, const uint32_t *indices, 
+        const uint32_t *count, size_t num_bucket, size_t curr_window, size_t num_points)
+{
+    size_t idx = threadIdx.x + blockDim.x * blockIdx.x;
+    size_t stride = blockDim.x * gridDim.x;
+    // size_t curr_window = blockIdx.y;
     while (idx < num_bucket)
     {
         if (count[idx + curr_window * num_bucket] > 0 && count[idx + curr_window * num_bucket] < 128)
@@ -95,7 +123,7 @@ __global__ void sum_small_bucket(const Point *point, Point *sum, const uint32_t 
             size_t end = start + count[idx + curr_window * num_bucket];
             for (size_t i = start; i < end; i++)
             {
-                lsum = lsum + point[indices[i]];
+                lsum = lsum + point[i%num_points];
             }
             sum[idx + curr_window * num_bucket] = lsum;
         }
@@ -103,10 +131,11 @@ __global__ void sum_small_bucket(const Point *point, Point *sum, const uint32_t 
         idx += stride;
     }
 }
-__global__ void sum_medium_bucket(const Point *point, Point *sum, const uint32_t *offset, const uint32_t *indices, const uint32_t *count, size_t num_bucket)
+__global__ void sum_medium_bucket(const Point *point, Point *sum, const uint32_t *offset, 
+    const uint32_t *indices, const uint32_t *count, size_t num_bucket, size_t curr_window, size_t num_points)
 {
     size_t bucket = blockIdx.x;
-    size_t curr_window = blockIdx.y;
+    // size_t curr_window = blockIdx.y;
     size_t stride = gridDim.x;
     size_t num_threads = blockDim.x;
 
@@ -132,7 +161,7 @@ __global__ void sum_medium_bucket(const Point *point, Point *sum, const uint32_t
         lsum = lsum.zero();
         for (size_t i = start; i < end; i++)
         {
-            lsum = lsum.mixed_add(point[indices[i]]);
+            lsum = lsum.mixed_add(point[i%num_points]);
         }
         shared_sum[idx] = lsum;
         __syncthreads();
@@ -153,7 +182,7 @@ __global__ void sum_medium_bucket(const Point *point, Point *sum, const uint32_t
 
 __global__ void sum_large_bucket()
 {
-    
+
 }
 
 // sum all the buckets of a window and store the result to a point
@@ -259,7 +288,22 @@ __global__ void print_point(Point *p, size_t num = 1)
         }
     }
 }
-
+__global__ void print_array(uint32_t *arr, size_t num = 1)
+{
+    for (size_t i = 0; i < num; i++)
+    {
+        printf("%u ", arr[i]);
+    }
+    printf("\n");
+}
+__global__ void print_bucket_count(uint32_t *count, size_t num = 1)
+{
+    for (size_t i = 0; i < num; i++)
+    {
+        if(count[i]) printf("bucket %lu : %u, ", i, count[i]);
+    }
+    printf("\n");
+}
 #endif
 
 // driver function to perform multi scalar multiplication
@@ -327,13 +371,28 @@ void cuda_pippenger_msm(Point *points, Scalar *scalars, size_t num_points)
     cudaEventElapsedTime(&ms, start, stop);
     printf("Time taken to process scalar: %f\n", ms);
 
+    // print_bucket_count<<<1, 1>>>(count, num_bucket * num_windows);
+    // print_array<<<1, 1>>>(offset, num_bucket * num_windows);
+    // print_array<<<1,1>>>(indices, num_points * num_windows);
     // Sum the buckets
     Point *sum;
     CUDA_CHECK(cudaMalloc(&sum, sizeof(Point) * num_bucket * num_windows));
     dim3 block(64);
-    dim3 grid(2*84, num_windows); //(num_bucket + blockSize - 1) / blockSize
-    sum_small_bucket<<<grid, block>>>(points, sum, offset, indices, count, num_bucket);
-    sum_medium_bucket<<<grid, block, block.x * sizeof(Point)>>>(points, sum, offset, indices, count, num_bucket);
+    dim3 grid(4*84, 1); //(num_bucket + blockSize - 1) / blockSize
+    
+    Point *sorted_points;
+    CUDA_CHECK(cudaMalloc(&sorted_points, sizeof(Point) * num_points));
+
+    for(int i = 0; i < num_windows; i++)
+    {
+        sort_points_for_bucket<<<grid, block>>>(points, sorted_points, indices, offset, count, num_bucket, i, num_points);
+        CUDA_CHECK(cudaDeviceSynchronize());
+
+        sum_small_bucket<<<grid, block>>>(sorted_points, sum, offset, indices, count, num_bucket, i, num_points);
+        sum_medium_bucket<<<grid, block, block.x * sizeof(Point)>>>(sorted_points, sum, offset, indices, count, num_bucket, i, num_points);
+        CUDA_CHECK(cudaDeviceSynchronize());
+    }
+
 
     CUDA_CHECK(cudaDeviceSynchronize());
 
