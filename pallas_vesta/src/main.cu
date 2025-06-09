@@ -8,6 +8,7 @@
 #include "./../include/Point.cuh"
 
 // #include "./msm.cu"
+// #include "./msm_with_filter.cu"
 #include "./msm_optimization_3.cu"
 
 // #include "./../constants/msm_sage_values_2.cuh"
@@ -48,6 +49,7 @@ CUTThread start_thread(CUT_THREADROUTINE func, void *data)
 // Wait for thread to finish
 void end_thread(CUTThread thread)
 {
+    // pthread_exit(NULL);
     pthread_join(thread, NULL);
 }
 
@@ -151,6 +153,22 @@ __global__ void print_point(uint64_t *x, uint64_t *y, uint64_t *z)
     p.to_affine();
     p.print();
 }
+
+// struct MSM
+// {
+//     Point *points;
+//     Scalar *scalars;
+//     size_t num_points;
+//     Point *result;
+// };
+
+// void* getMSM(void *msm)
+// {
+//     MSM *msm_data = (MSM *)msm;
+//     msm_data->result = cuda_pippenger_msm(msm_data->points, msm_data->scalars, msm_data->num_points);
+//     CUDA_CHECK(cudaDeviceSynchronize());
+// }
+
 int main(int argc, char *argv[])
 {
 
@@ -186,9 +204,41 @@ int main(int argc, char *argv[])
 
     // check_construction<<<1,1>>>(points, scalars);
 
+    cudaEvent_t start, stop;
+    CUDA_CHECK(cudaEventCreate(&start));
+    CUDA_CHECK(cudaEventCreate(&stop));
+    CUDA_CHECK(cudaEventRecord(start, 0));
+    CUDA_CHECK(cudaEventSynchronize(start));
+
+    // int batch = log_size - 4 < WINDOW_SIZE ? 1 : (log_size - WINDOW_SIZE -4);
+    // // batch = batch - 5;
+    // batch = 1<<batch;
+    // size_t per_batch = (num_v + batch - 1)/ batch;
+    // CUTThread threads[batch];
+    // MSM msm_data[batch];
+    // for(int i = 0; i < batch; i++)
+    // {
+    //     msm_data[i].points = points + i * per_batch;
+    //     msm_data[i].scalars = scalars + i * per_batch;
+    //     msm_data[i].num_points = per_batch;
+
+    //     threads[i] = start_thread(getMSM, (void *)&msm_data[i]);
+    // }
+    // for(int i = 0; i < batch; i++)
+    // {
+    //     end_thread(threads[i]);
+    // }
     cuda_pippenger_msm(points, scalars, num_v);
+    // msm(points, scalars, num_v);
     CUDA_CHECK(cudaDeviceSynchronize());
 
+    CUDA_CHECK(cudaEventRecord(stop, 0));
+    CUDA_CHECK(cudaEventSynchronize(stop));
+    float elapsedTime;
+    CUDA_CHECK(cudaEventElapsedTime(&elapsedTime, start, stop));
+    printf("Elapsed time: %f ms\n", elapsedTime);
+    CUDA_CHECK(cudaEventDestroy(start));
+    CUDA_CHECK(cudaEventDestroy(stop));
 
     // to check the result with pasta-msm output
     
