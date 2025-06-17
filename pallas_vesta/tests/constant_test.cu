@@ -78,7 +78,7 @@ TEST_F(CurveConstants, check_Modulus_Pallas)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, pallas::MODULUS, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, pallas::MODULUS, sizeof(uint64_t)*4, cudaMemcpyDefault);
     cudaDeviceSynchronize();
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
@@ -93,7 +93,7 @@ TEST_F(CurveConstants, check_R_Pallas)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, pallas::R, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, pallas::R, sizeof(uint64_t)*4, cudaMemcpyDefault);
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -107,7 +107,7 @@ TEST_F(CurveConstants, check_R2_Pallas)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, pallas::R2, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, pallas::R2, sizeof(uint64_t)*4, cudaMemcpyDefault);
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -121,7 +121,7 @@ TEST_F(CurveConstants, check_R3_Pallas)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, pallas::R3, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, pallas::R3, sizeof(uint64_t)*4, cudaMemcpyDefault);
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -135,7 +135,7 @@ TEST_F(CurveConstants, check_Generator_Pallas)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, pallas::GENERATOR, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, pallas::GENERATOR, sizeof(uint64_t)*4, cudaMemcpyDefault);
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -149,7 +149,7 @@ TEST_F(CurveConstants, check_Inv_Pallas)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, &pallas::INV, sizeof(uint64_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, &pallas::INV, sizeof(uint64_t), cudaMemcpyDefault);
     write_project_output_to_file(data, 1);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -163,7 +163,7 @@ TEST_F(CurveConstants, check_Modulus_Vesta)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, vesta::MODULUS, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, vesta::MODULUS, sizeof(uint64_t)*4, cudaMemcpyDefault);
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -177,7 +177,7 @@ TEST_F(CurveConstants, check_R_Vesta)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, vesta::R, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, vesta::R, sizeof(uint64_t)*4, cudaMemcpyDefault);
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -191,7 +191,7 @@ TEST_F(CurveConstants, check_R2_Vesta)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, vesta::R2, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, vesta::R2, sizeof(uint64_t)*4, cudaMemcpyDefault);
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -205,7 +205,7 @@ TEST_F(CurveConstants, check_R3_Vesta)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, vesta::R3, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, vesta::R3, sizeof(uint64_t)*4, cudaMemcpyDefault);
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -219,7 +219,7 @@ TEST_F(CurveConstants, check_Generator_Vesta)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, vesta::GENERATOR, sizeof(uint64_t)*4, cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, vesta::GENERATOR, sizeof(uint64_t)*4, cudaMemcpyDefault);
     write_project_output_to_file(data);
     ASSERT_TRUE(compare_two_files_output());
 }
@@ -233,7 +233,7 @@ TEST_F(CurveConstants, check_Inv_Vesta)
         ASSERT_TRUE(false);
     }
     uint64_t data[4];
-    cudaMemcpy(data, &vesta::INV, sizeof(uint64_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, &vesta::INV, sizeof(uint64_t), cudaMemcpyDefault);
     write_project_output_to_file(data, 1);
     ASSERT_TRUE(compare_two_files_output());
 }
