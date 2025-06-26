@@ -8,13 +8,13 @@
 #include "./../include/Point.cuh"
 
 // #include "./msm.cu"
-#include "./msm_faster.cu"
-// #include "./msm_optimization_1.cu"
+#include "./msm_sorted.cu"
+// #include "./msm_optimization_2.cu"
 
-// #include "./../constants/msm_sage_values_2.cuh"
+#include "./../constants/msm_sage_values.cuh"
 // #include "./../constants/pasta_22.cuh"
 // #include "./../constants/pasta_17.cuh"
-#include "./../tests/test_files/msm_18.cuh"
+// #include "./../tests/test_files/msm_18.cuh"
 
 #define debug 1
 

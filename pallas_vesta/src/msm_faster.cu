@@ -25,6 +25,7 @@
         }                                                                        \
     } while (0)
 
+
 __global__ void sum_bucket(__const__ Point *point, Point *sum, __const__ uint32_t *offset, __const__ uint32_t *count, __const__ uint32_t *indices, __const__ uint32_t bucket_count, __const__ uint32_t num_windows)
 {
     size_t idx = threadIdx.x;
